@@ -1,0 +1,45 @@
+import React from "react";
+import { createContext } from "react";
+import { type ladderCell, createDeviceComment, createInitialLadderMap } from "./Variants";
+
+export type editCellStatus = {
+    isOpen:boolean,
+    setIsOpen:React.Dispatch<React.SetStateAction<boolean>>,
+    cellX:number,
+    setCellX:React.Dispatch<React.SetStateAction<number>>,
+    cellY:number,
+    setCellY:React.Dispatch<React.SetStateAction<number>>,
+    selectedRow:number,
+    setSelectedRow:React.Dispatch<React.SetStateAction<number>>,
+    selectedCol:number,
+    setSelectedCol:React.Dispatch<React.SetStateAction<number>>,
+    ladderMap:ladderCell[][],
+    setLadderMap:React.Dispatch<React.SetStateAction<ladderCell[][]>>,
+    deviceComment:{[key:string]:string}
+    setDeviceComment:React.Dispatch<React.SetStateAction<{[key:string]:string}>>,
+    initialInput:string,
+    setInitialInput:React.Dispatch<React.SetStateAction<string>>,
+    displayPage:number,
+    setDisplayPage:React.Dispatch<React.SetStateAction<number>>
+}
+
+export const EditCellStatusContext = createContext<editCellStatus>({
+    isOpen: false,
+    setIsOpen: () => {},
+    cellX: 0,
+    setCellX: () => {},
+    cellY: 0,
+    setCellY: () => {},
+    selectedRow: -1,
+    setSelectedRow: () => {},
+    selectedCol: -1,
+    setSelectedCol: () => {},
+    ladderMap: createInitialLadderMap(),
+    setLadderMap: () => {},
+    deviceComment:createDeviceComment(),
+    setDeviceComment: ()=>{},
+    initialInput: '',
+    setInitialInput: () => {},
+    displayPage:0,
+    setDisplayPage: () => {},
+});
