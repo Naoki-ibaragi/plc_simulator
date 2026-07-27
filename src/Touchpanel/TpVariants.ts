@@ -23,12 +23,13 @@ export type buttonObj = {
 export type textObj = {
     id:string,
     elementType:"TEXT",
+    content:string,
     color:colorName,
     pointX:number,
     pointY:number
 }
 
-export type tpElementObj = lampObj | buttonObj
+export type tpElementObj = lampObj | buttonObj | textObj;
 
 export const createLampObj = (pointX:number, pointY:number): lampObj => ({
     id: crypto.randomUUID(),
@@ -52,7 +53,8 @@ export const createButtonObj = (pointX:number, pointY:number): buttonObj => ({
 export const createTextObj = (pointX:number, pointY:number): textObj => ({
     id: crypto.randomUUID(),
     elementType:"TEXT",
-    color:"blue",
+    color:"red",
+    content:"",
     pointX,
     pointY
 })

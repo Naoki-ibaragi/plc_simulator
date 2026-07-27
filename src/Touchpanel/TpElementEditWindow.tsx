@@ -12,12 +12,17 @@ function TpElementEditWindow() {
   const [color, setColor] = useState<colorName>("red");
   const [bitDevice, setBitDevice] = useState("");
   const [btnType, setBtnType] = useState<buttonType>("MOMENTARY");
+  const [content, setContent] = useState("");
 
   useEffect(() => {
     if (!element) return;
     setColor(element.color);
-    setBitDevice(element.bitDevice);
     if (element.elementType === "BUTTON") setBtnType(element.buttonType);
+    if (element.elementType === "TEXT") {
+      setContent(element.content);
+    } else {
+      setBitDevice(element.bitDevice);
+    }
   }, [element]);
 
   if (!tpStatus.isEditOpen || !element) return null;
@@ -25,9 +30,9 @@ function TpElementEditWindow() {
   const handleSave = () => {
     tpStatus.setTpElements(prev => prev.map(el => {
       if (el.id !== element.id) return el;
-      return el.elementType === "BUTTON"
-        ? { ...el, color, bitDevice, buttonType: btnType }
-        : { ...el, color, bitDevice };
+      if (el.elementType === "BUTTON") return { ...el, color, bitDevice, buttonType: btnType };
+      if (el.elementType === "TEXT") return { ...el, color, content };
+      return { ...el, color, bitDevice };
     }));
     tpStatus.setIsEditOpen(false);
   };
@@ -45,7 +50,7 @@ function TpElementEditWindow() {
     >
       <div className='flex items-center justify-between bg-gray-50 px-4 py-2 border-b border-gray-200'>
         <span className='text-sm font-medium text-gray-700'>
-          {element.elementType === "LAMP" ? "ランプ" : "ボタン"}の設定
+          {element.elementType === "LAMP" ? "ランプ" : element.elementType === "BUTTON" ? "ボタン" : "テキスト"}の設定
         </span>
         <button
           type='button'
@@ -57,15 +62,27 @@ function TpElementEditWindow() {
         </button>
       </div>
       <div className='flex flex-col gap-3 p-4'>
-        <label className='flex flex-col gap-1 text-sm text-gray-700'>
-          デバイス
-          <input
-            type='text'
-            value={bitDevice}
-            onChange={(e) => setBitDevice(e.target.value)}
-            className='rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:border-blue-500 focus:ring-blue-500/20'
-          />
-        </label>
+        {element.elementType === "TEXT" ? (
+          <label className='flex flex-col gap-1 text-sm text-gray-700'>
+            テキスト
+            <input
+              type='text'
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className='rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:border-blue-500 focus:ring-blue-500/20'
+            />
+          </label>
+        ) : (
+          <label className='flex flex-col gap-1 text-sm text-gray-700'>
+            デバイス
+            <input
+              type='text'
+              value={bitDevice}
+              onChange={(e) => setBitDevice(e.target.value)}
+              className='rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:border-blue-500 focus:ring-blue-500/20'
+            />
+          </label>
+        )}
         <label className='flex flex-col gap-1 text-sm text-gray-700'>
           カラー
           <select

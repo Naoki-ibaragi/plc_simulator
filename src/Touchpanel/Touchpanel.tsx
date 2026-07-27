@@ -3,6 +3,7 @@ import { TpContext } from './TpContext'
 import { createLampObj, createButtonObj, createTextObj } from './TpVariants'
 import Lamp from './Components/Lamp'
 import Button from './Components/Button'
+import Text from './Components/Text'
 
 const ELEMENT_SIZE = 40 //w-10 h-10
 const ELEMENT_RADIUS = ELEMENT_SIZE / 2 //ドロップ位置を要素の中心に合わせるためのオフセット
@@ -35,6 +36,8 @@ function Touchpanel() {
       tpStatus.setTpElements(prev => [...prev, createLampObj(pointX, pointY)]);
     } else if (elementType === "BUTTON") {
       tpStatus.setTpElements(prev => [...prev, createButtonObj(pointX, pointY)]);
+    } else if (elementType === "TEXT"){
+      tpStatus.setTpElements(prev => [...prev, createTextObj(pointX, pointY)])
     }
   };
 
@@ -74,6 +77,15 @@ function Touchpanel() {
           case "BUTTON":
             return (
               <Button
+                key={element.id}
+                obj={element}
+                onDoubleClick={(e) => handleDoubleClick(e, element.id)}
+                onDragStart={(e) => handleElementDragStart(e, element.id)}
+              />
+            )
+          case "TEXT":
+            return (
+              <Text
                 key={element.id}
                 obj={element}
                 onDoubleClick={(e) => handleDoubleClick(e, element.id)}
