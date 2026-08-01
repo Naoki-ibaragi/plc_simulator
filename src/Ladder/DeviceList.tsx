@@ -19,7 +19,7 @@ function DeviceList(
   const filteredDevices = Object.keys(deviceComment).filter(device => device.startsWith(selectedType));
 
   return (
-    <div className='fixed top-0 right-0 h-full w-72 flex flex-col rounded-l-xl border-l border-gray-200 shadow-sm bg-white'>
+    <div className='h-full w-90 shrink-0 flex flex-col border-r border-gray-200 shadow-sm bg-white'>
       <div className='flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2'>
         <label className='text-sm font-medium text-gray-700' htmlFor='device-type-select'>デバイス種別</label>
         <select

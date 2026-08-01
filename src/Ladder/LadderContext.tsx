@@ -19,8 +19,14 @@ export type editCellStatus = {
     setDeviceComment:React.Dispatch<React.SetStateAction<{[key:string]:string}>>,
     initialInput:string,
     setInitialInput:React.Dispatch<React.SetStateAction<string>>,
-    displayPage:number,
-    setDisplayPage:React.Dispatch<React.SetStateAction<number>>
+    showDeviceList:boolean,
+    setShowDeviceList:React.Dispatch<React.SetStateAction<boolean>>,
+    showLadder:boolean,
+    setShowLadder:React.Dispatch<React.SetStateAction<boolean>>,
+    showTouchPanel:boolean,
+    setShowTouchPanel:React.Dispatch<React.SetStateAction<boolean>>,
+    showEquipment:boolean,
+    setShowEquipment:React.Dispatch<React.SetStateAction<boolean>>,
 }
 
 export const EditCellStatusContext = createContext<editCellStatus>({
@@ -40,6 +46,12 @@ export const EditCellStatusContext = createContext<editCellStatus>({
     setDeviceComment: ()=>{},
     initialInput: '',
     setInitialInput: () => {},
-    displayPage:0,
-    setDisplayPage: () => {},
+    showDeviceList: true,
+    setShowDeviceList: () => {},
+    showLadder: true,
+    setShowLadder: () => {},
+    showTouchPanel: false,
+    setShowTouchPanel: () => {},
+    showEquipment: false,
+    setShowEquipment: () => {},
 });

@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react'
-import { EditCellStatusContext } from './UserContext'
+import { EditCellStatusContext } from './LadderContext'
 import { parseCommand,COLUMN_NUM } from './Variants'
 
 function CellEditWindow() {

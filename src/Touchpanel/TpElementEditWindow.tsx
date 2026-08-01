@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { TpContext } from './TpContext'
 import type { colorName, buttonType } from './TpVariants'
 
@@ -13,6 +13,8 @@ function TpElementEditWindow() {
   const [bitDevice, setBitDevice] = useState("");
   const [btnType, setBtnType] = useState<buttonType>("MOMENTARY");
   const [content, setContent] = useState("");
+  const windowRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ left: 0, top: 0 });
 
   useEffect(() => {
     if (!element) return;
@@ -24,6 +26,25 @@ function TpElementEditWindow() {
       setBitDevice(element.bitDevice);
     }
   }, [element]);
+
+  //画面枠外にはみ出す場合は基準点の上側・左側に表示位置をずらす
+  useLayoutEffect(() => {
+    if (!tpStatus.isEditOpen) return;
+    let left = tpStatus.editX;
+    let top = tpStatus.editY;
+    const rect = windowRef.current?.getBoundingClientRect();
+    if (rect) {
+      if (top + rect.height > window.innerHeight) {
+        top = tpStatus.editY - rect.height;
+      }
+      if (left + rect.width > window.innerWidth) {
+        left = window.innerWidth - rect.width;
+      }
+      top = Math.max(0, top);
+      left = Math.max(0, left);
+    }
+    setPos({ left, top });
+  }, [tpStatus.isEditOpen, tpStatus.editX, tpStatus.editY, element]);
 
   if (!tpStatus.isEditOpen || !element) return null;
 
@@ -44,9 +65,10 @@ function TpElementEditWindow() {
 
   return (
     <div
+      ref={windowRef}
       data-tp-edit-window
       className='fixed z-100 w-64 rounded-xl border border-gray-200 bg-white shadow-2xl ring-1 ring-black/5 overflow-hidden'
-      style={{ left: tpStatus.editX, top: tpStatus.editY }}
+      style={{ left: pos.left, top: pos.top }}
     >
       <div className='flex items-center justify-between bg-gray-50 px-4 py-2 border-b border-gray-200'>
         <span className='text-sm font-medium text-gray-700'>

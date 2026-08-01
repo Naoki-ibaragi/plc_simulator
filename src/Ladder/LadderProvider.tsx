@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { type ReactNode } from "react";
-import { EditCellStatusContext } from "./UserContext";
+import { EditCellStatusContext } from "./LadderContext";
 import { ROW_NUM, COLUMN_NUM, createInitialLadderMap, createDeviceComment, type ladderCell, type CellType, type CellDevice} from "./Variants";
 
 interface Props {
@@ -16,7 +16,10 @@ export function UserProvider({ children }: Props) {
     const [ladderMap,setLadderMap] = useState<ladderCell[][]>(createInitialLadderMap());
     const [deviceComment,setDeviceComment] = useState(createDeviceComment());
     const [initialInput,setInitialInput] = useState('');
-    const [displayPage,setDisplayPage] = useState(1);
+    const [showDeviceList,setShowDeviceList] = useState(true);
+    const [showLadder,setShowLadder] = useState(true);
+    const [showTouchPanel,setShowTouchPanel] = useState(false);
+    const [showEquipment,setShowEquipment] = useState(false);
     const copiedCellRef = useRef<{ cell:CellType, device:CellDevice } | null>(null);
 
     //ラダー以外でクリックをしたらセルの選択を外す
@@ -233,8 +236,14 @@ export function UserProvider({ children }: Props) {
             setDeviceComment,
             initialInput,
             setInitialInput,
-            displayPage,
-            setDisplayPage,
+            showDeviceList,
+            setShowDeviceList,
+            showLadder,
+            setShowLadder,
+            showTouchPanel,
+            setShowTouchPanel,
+            showEquipment,
+            setShowEquipment,
         }}
     >
       {children}

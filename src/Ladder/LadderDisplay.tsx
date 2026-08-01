@@ -1,5 +1,5 @@
 import { type ladderCell } from './Variants'
-import LadderImage from './LadderImage'
+import LadderImage from './Components/LadderImage'
 import { useContext } from 'react'
 
 function LadderDisplay({ ladderMap, deviceComment }: { ladderMap: ladderCell[][], deviceComment: {[key:string]:string} }) {

@@ -1,10 +1,10 @@
 import type { textObj } from '../TpVariants'
 
 const colorClassMap: Record<textObj["color"], string> = {
-  red: "bg-red-500",
-  green: "bg-green-500",
-  blue: "bg-blue-500",
-  yellow: "bg-yellow-400",
+  red: "text-red-500",
+  green: "text-green-500",
+  blue: "text-blue-500",
+  yellow: "text-yellow-400",
 }
 
 type textProps = {
@@ -17,7 +17,7 @@ function Text({ obj, onDoubleClick, onDragStart }: textProps) {
   return (
     <div
       draggable
-      className={`absolute w-20 h-10 border-2 border-gray-600 cursor-move ${colorClassMap[obj.color]}`}
+      className={`absolute whitespace-nowrap bg-transparent cursor-move ${colorClassMap[obj.color]}`}
       style={{ left: obj.pointX, top: obj.pointY }}
       onDoubleClick={onDoubleClick}
       onDragStart={onDragStart}

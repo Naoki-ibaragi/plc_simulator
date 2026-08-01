@@ -32,20 +32,37 @@ export function createInitialLadderMap():ladderCell[][] {
     return map;
 }
 
+//デバイスキー一覧を列挙する（X0~X31,Y0~Y31,D0~D99,M0~M99,T0~T99）
+function listDeviceKeys():string[]{
+    const keys:string[] = [];
+    for(let i=0;i<100;i++){
+        if(i<32){
+            keys.push('X'+i);
+            keys.push('Y'+i);
+        }
+        keys.push('D'+i);
+        keys.push('M'+i);
+        keys.push('T'+i);
+    }
+    return keys;
+}
+
 //コメントの初期化
 export function createDeviceComment(){
     const commentObj:{[key:string]:string}={};
-    //X0~X31,Y0~Y31,D0~D99,M0~M99,T0~T99
-    for(let i=0;i<100;i++){
-        if(i<32){
-            commentObj['X'+i] = "";
-            commentObj['Y'+i] = "";
-        }
-        commentObj['D'+i] = "";
-        commentObj['M'+i] = "";
-        commentObj['T'+i] = "";
+    for(const key of listDeviceKeys()){
+        commentObj[key] = "";
     }
     return commentObj;
+}
+
+//デバイス値(ON/OFF)の初期化
+export function createDeviceValue():{[key:string]:boolean}{
+    const valueObj:{[key:string]:boolean}={};
+    for(const key of listDeviceKeys()){
+        valueObj[key] = false;
+    }
+    return valueObj;
 }
 
 const CELL_TYPES:CellType[] = ["LD","LDB","OUT","LINE"];

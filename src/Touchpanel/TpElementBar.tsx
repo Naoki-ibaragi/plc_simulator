@@ -1,3 +1,5 @@
+import { LADDER_WIDTH } from '../layoutConstants'
+
 function TpElementBar() {
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, elementType: "LAMP" | "BUTTON" | "TEXT") => {
     e.dataTransfer.setData("text/plain", elementType);
@@ -5,7 +7,7 @@ function TpElementBar() {
   };
 
   return (
-    <div className="flex items-center gap-6 w-[80%] px-4 py-3 border border-gray-300 bg-gray-100 rounded-b-lg">
+    <div className="flex items-center gap-6 shrink-0 px-4 py-3 border border-gray-300 bg-gray-100 rounded-b-lg" style={{ width: LADDER_WIDTH }}>
       <span className="text-sm text-gray-600">部品をドラッグして配置</span>
       <div
         draggable
