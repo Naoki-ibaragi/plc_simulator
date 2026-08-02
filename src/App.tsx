@@ -83,11 +83,17 @@ function App() {
               {mode === 'EDIT' && <TpElementBar />}
             </div>
           )}
+          
           {showEquipment && (
             <div className='flex-1 min-h-0 w-full overflow-hidden bg-gray-50 border-t border-gray-200'>
               <Equipment />
             </div>
           )}
+          {/*showEquipment && (
+            <div className='flex-1 min-h-0 w-full overflow-hidden bg-gray-50 border-t border-gray-200'>
+              <ControlPanel />
+            </div>
+          )*/}
         </div>
       </div>
       <CellEditWindow />
