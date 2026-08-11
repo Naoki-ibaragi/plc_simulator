@@ -110,7 +110,7 @@ function Equipment() {
         <CylinderRodModel />
       </Suspense>
 
-      <OrbitControls />
+      <OrbitControls enableDamping={false} />
     </Canvas>
   )
 }

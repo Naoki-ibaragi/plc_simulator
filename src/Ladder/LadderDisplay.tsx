@@ -14,7 +14,7 @@ function LadderDisplay({ ladderMap, deviceComment }: { ladderMap: ladderCell[][]
         </div>
         {ladderMap.map((row, y) => (
           <div key={y} className='flex'>
-              <span className='font-bold w-12 bg-cyan-500 flex items-center justify-center'>{y+1}</span>
+              <span className='font-bold w-12 bg-cyan-500 flex items-center justify-center'>{String(y+1).padStart(3, '0')}</span>
               {row.map((cell, x) => (
                 <span key={x}><LadderImage 
                 cell={cell.cell} 

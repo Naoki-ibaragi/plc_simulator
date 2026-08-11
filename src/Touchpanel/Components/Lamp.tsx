@@ -18,7 +18,7 @@ function Lamp({ obj, isOn = false, onDoubleClick, onDragStart }: LampProps) {
   return (
     <div
       draggable
-      className={`absolute w-10 h-10 rounded-full border-2 border-gray-600 cursor-move ${isOn ? colorClassMap[obj.color] : "bg-gray-300"}`}
+      className={`absolute w-10 h-10 rounded-md border-2 border-gray-600 cursor-move ${isOn ? colorClassMap[obj.color] : "bg-gray-300"}`}
       style={{ left: obj.pointX, top: obj.pointY }}
       onDoubleClick={onDoubleClick}
       onDragStart={onDragStart}

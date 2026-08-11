@@ -27,22 +27,25 @@ function TpElementEditWindow() {
     }
   }, [element]);
 
-  //画面枠外にはみ出す場合は基準点の上側・左側に表示位置をずらす
+  //部品がタッチパネル(ウインドウ)の左右どちら側/上下どちら側にあるかで、基準点を起点にウインドウを開く向きを変える
+  //(別ウィンドウ化に伴い、判定にはwindowRefが実際に属するウインドウの寸法を使う。常時グローバルなwindowだと
+  //ポップアップ内で開いた場合にメインウィンドウのサイズで判定してしまいはみ出す)
   useLayoutEffect(() => {
     if (!tpStatus.isEditOpen) return;
-    let left = tpStatus.editX;
-    let top = tpStatus.editY;
+    const view = windowRef.current?.ownerDocument.defaultView ?? window;
     const rect = windowRef.current?.getBoundingClientRect();
-    if (rect) {
-      if (top + rect.height > window.innerHeight) {
-        top = tpStatus.editY - rect.height;
-      }
-      if (left + rect.width > window.innerWidth) {
-        left = window.innerWidth - rect.width;
-      }
-      top = Math.max(0, top);
-      left = Math.max(0, left);
-    }
+    const w = rect?.width ?? 0;
+    const h = rect?.height ?? 0;
+
+    const openToLeft = tpStatus.editX > view.innerWidth / 2;
+    const openToTop = tpStatus.editY > view.innerHeight / 2;
+
+    let left = openToLeft ? tpStatus.editX - w : tpStatus.editX;
+    let top = openToTop ? tpStatus.editY - h : tpStatus.editY;
+
+    left = Math.min(Math.max(0, left), Math.max(0, view.innerWidth - w));
+    top = Math.min(Math.max(0, top), Math.max(0, view.innerHeight - h));
+
     setPos({ left, top });
   }, [tpStatus.isEditOpen, tpStatus.editX, tpStatus.editY, element]);
 

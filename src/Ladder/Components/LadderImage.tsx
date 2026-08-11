@@ -8,7 +8,14 @@ function LadderImage({ cell, device, row, col, hasLine, comment }: { cell: CellT
     let content: React.ReactNode
     const cellEditStatus = useContext(EditCellStatusContext);
     const { mode, deviceValue } = useContext(RuntimeContext);
-    const isSelected = cellEditStatus.selectedRow === row && cellEditStatus.selectedCol === col;
+    const isAnchor = cellEditStatus.selectedRow === row && cellEditStatus.selectedCol === col;
+    const rangeRowStart = Math.min(cellEditStatus.selectedRow, cellEditStatus.selectionEndRow);
+    const rangeRowEnd = Math.max(cellEditStatus.selectedRow, cellEditStatus.selectionEndRow);
+    const rangeColStart = Math.min(cellEditStatus.selectedCol, cellEditStatus.selectionEndCol);
+    const rangeColEnd = Math.max(cellEditStatus.selectedCol, cellEditStatus.selectionEndCol);
+    const isInRange = cellEditStatus.selectedRow !== -1 && cellEditStatus.selectedCol !== -1 &&
+        row >= rangeRowStart && row <= rangeRowEnd && col >= rangeColStart && col <= rangeColEnd;
+    const isSelected = isAnchor || isInRange;
 
     //ランモード中、接点/コイルの現在のON/OFF状態を可視化する(LD/OUT:ONで通電表示、LDB:OFFで通電表示)
     const isEnergized = mode === 'RUN' && !!device && (
@@ -16,9 +23,17 @@ function LadderImage({ cell, device, row, col, hasLine, comment }: { cell: CellT
         (cell === 'LDB' && !deviceValue[device])
     );
 
-    const selectCell=()=>{
+    const selectCell=(e:React.MouseEvent<HTMLDivElement>)=>{
+        if(e.shiftKey && cellEditStatus.selectedRow !== -1 && cellEditStatus.selectedCol !== -1){
+            //shift+クリックでアンカーはそのままに選択範囲を拡張する
+            cellEditStatus.setSelectionEndRow(row);
+            cellEditStatus.setSelectionEndCol(col);
+            return;
+        }
         cellEditStatus.setSelectedRow(row);
         cellEditStatus.setSelectedCol(col);
+        cellEditStatus.setSelectionEndRow(row);
+        cellEditStatus.setSelectionEndCol(col);
     }
 
     const editCell=(e:React.MouseEvent<HTMLDivElement>)=>{
@@ -27,6 +42,8 @@ function LadderImage({ cell, device, row, col, hasLine, comment }: { cell: CellT
         cellEditStatus.setCellY(e.clientY);
         cellEditStatus.setSelectedRow(row);
         cellEditStatus.setSelectedCol(col);
+        cellEditStatus.setSelectionEndRow(row);
+        cellEditStatus.setSelectionEndCol(col);
         cellEditStatus.setIsOpen(true);
     }
 
@@ -70,13 +87,17 @@ function LadderImage({ cell, device, row, col, hasLine, comment }: { cell: CellT
     }
 
     return (
-        <div data-ladder-cell data-row={row} data-col={col} className={`w-20 border border-dotted ${isSelected ? 'border-blue-500' : 'border-gray-300'}`} onClick={selectCell} onDoubleClick={editCell}>
+        <div data-ladder-cell data-row={row} data-col={col} className={`w-20 ${isInRange && !isAnchor ? 'bg-blue-100' : ''}`} onClick={selectCell} onDoubleClick={editCell}>
             <svg viewBox="0 0 80 80" className='w-full h-auto block'>
+                <rect x="0.5" y="0.5" width="79" height="79" fill="none" stroke="#d1d5db" strokeDasharray="4 3"/>
+                {isSelected && (
+                    <rect x="1" y="1" width="78" height="78" fill="none" stroke="#3b82f6" strokeWidth="2"/>
+                )}
                 {device && (
                     <text x="40" y="20" textAnchor="middle" style={{ fontSize: '14px' }} fill="black">{device}</text>
                 )}
-                {hasLine[0] && <line x1="0" y1="0" x2="0" y2="40" stroke="black"/>}
-                {hasLine[1] && <line x1="0" y1="40" x2="0" y2="80" stroke="black"/>}
+                {hasLine[0] && <line x1="0.5" y1="0" x2="0.5" y2="40" stroke="black"/>}
+                {hasLine[1] && <line x1="0.5" y1="40" x2="0.5" y2="80" stroke="black"/>}
                 {isEnergized && <rect x="10" y="25" width="60" height="30" fill="rgba(37, 99, 235, 0.35)"/>}
                 {content}
                 {comment && (

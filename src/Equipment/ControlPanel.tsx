@@ -96,7 +96,7 @@ function ControlPanel() {
       <Switch />
       <Lamp />
 
-      <OrbitControls />
+      <OrbitControls enableDamping={false} />
     </Canvas>
   )
 }

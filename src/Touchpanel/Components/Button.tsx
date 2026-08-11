@@ -19,7 +19,7 @@ function Button({ obj, onPress, onRelease, onDoubleClick, onDragStart }: ButtonP
   return (
     <button
       draggable
-      className={`absolute w-10 h-10 rounded-full border-2 border-gray-600 shadow-md cursor-move ${colorClassMap[obj.color]}`}
+      className={`absolute w-10 h-10 rounded-md border-2 border-gray-600 shadow-md cursor-move ${colorClassMap[obj.color]}`}
       style={{ left: obj.pointX, top: obj.pointY }}
       onMouseDown={onPress}
       onMouseUp={onRelease}
