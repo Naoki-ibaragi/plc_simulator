@@ -2,12 +2,24 @@ import { useState, useEffect, useRef } from "react";
 import { type ReactNode } from "react";
 import { EditCellStatusContext } from "./LadderContext";
 import { ROW_NUM, COLUMN_NUM, createInitialLadderMap, createDeviceComment, type ladderCell, type CellType, type CellDevice} from "./Variants";
+import { ladderStorageKey } from "../storageKeys";
 
 interface Props {
+  storageKey: string;
   children: ReactNode;
 }
 
-export function UserProvider({ children }: Props) {
+//設備モデル(storageKey)ごとに保存済みのラダー/デバイスコメントを読み込む。保存が無ければnull
+function loadSavedLadder(storageKey: string): { ladderMap: ladderCell[][], deviceComment: {[key:string]:string} } | null {
+    try {
+        const raw = localStorage.getItem(ladderStorageKey(storageKey));
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+export function UserProvider({ storageKey, children }: Props) {
     const [isOpen,setIsOpen] = useState(false);
     const [cellX,setCellX] = useState(0);
     const [cellY,setCellY] = useState(0);
@@ -15,8 +27,8 @@ export function UserProvider({ children }: Props) {
     const [selectedCol,setSelectedCol] = useState(-1);
     const [selectionEndRow,setSelectionEndRow] = useState(-1);
     const [selectionEndCol,setSelectionEndCol] = useState(-1);
-    const [ladderMap,setLadderMap] = useState<ladderCell[][]>(createInitialLadderMap());
-    const [deviceComment,setDeviceComment] = useState(createDeviceComment());
+    const [ladderMap,setLadderMap] = useState<ladderCell[][]>(() => loadSavedLadder(storageKey)?.ladderMap ?? createInitialLadderMap());
+    const [deviceComment,setDeviceComment] = useState(() => loadSavedLadder(storageKey)?.deviceComment ?? createDeviceComment());
     const [initialInput,setInitialInput] = useState('');
     const [showTouchPanel,setShowTouchPanel] = useState(false);
     const [showEquipment,setShowEquipment] = useState(false);
@@ -28,6 +40,11 @@ export function UserProvider({ children }: Props) {
     useEffect(() => {
       if(!isOpen) lastCloseAtRef.current = Date.now();
     }, [isOpen]);
+
+    //ラダー/デバイスコメントの変更を設備モデルごとに自動保存する
+    useEffect(() => {
+      localStorage.setItem(ladderStorageKey(storageKey), JSON.stringify({ ladderMap, deviceComment }));
+    }, [storageKey, ladderMap, deviceComment]);
 
     //ラダー以外でクリックをしたらセルの選択を外す
     useEffect(() => {

@@ -1,4 +1,5 @@
 import React, { useContext } from 'react'
+import { Link } from 'react-router-dom'
 import { type runMode } from './Runtime/RuntimeContext'
 import { EditCellStatusContext } from './Ladder/LadderContext'
 import { downloadJson, pickJsonFile, readJsonFile } from './fileIO'
@@ -12,11 +13,13 @@ type LadderSaveData = {
 
 function MainMenu(
     {
+        equipmentLabel,
         showTouchPanel, setShowTouchPanel,
         showEquipment, setShowEquipment,
         mode, tryEnterRun, exitToEdit,
     }:
     {
+        equipmentLabel: string,
         showTouchPanel: boolean,
         setShowTouchPanel: React.Dispatch<React.SetStateAction<boolean>>,
         showEquipment: boolean,
@@ -76,6 +79,11 @@ function MainMenu(
 
   return (
     <div className='flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-2'>
+      <Link to='/' className={fileButtonClass} title='設備一覧に戻る'>
+        ← 設備一覧
+      </Link>
+      <span className='text-sm font-medium text-gray-500'>{equipmentLabel}</span>
+      <span className='mx-1 h-6 w-px bg-gray-200' />
       <button type='button' className={fileButtonClass} onClick={handleSaveLadder}>
         ラダー保存
       </button>

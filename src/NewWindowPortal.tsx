@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { PopupWindowContext } from './PopupWindowContext'
 
 type Props = {
   title: string,
@@ -12,6 +13,7 @@ type Props = {
 //window.openで開いた別ウィンドウのDOMに、同じReactツリー(同じContext)のままchildrenをポータル描画する
 function NewWindowPortal({ title, width = 800, height = 600, onClose, children }: Props) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
+  const [popupWindow, setPopupWindow] = useState<Window | null>(null);
   const onCloseRef = useRef(onClose);
 
   useEffect(() => {
@@ -41,6 +43,7 @@ function NewWindowPortal({ title, width = 800, height = 600, onClose, children }
     //別ウィンドウを開いた直後にポータル先DOMを確定させる必要があるため、effect内でのsetStateが必須
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setContainer(root);
+    setPopupWindow(win);
 
     //ポーリングでウィンドウが閉じられたことを検知する
     const timer = setInterval(() => {
@@ -50,6 +53,14 @@ function NewWindowPortal({ title, width = 800, height = 600, onClose, children }
       }
     }, 500);
 
+    //ポップアップ側のresizeイベントをメインウィンドウへ転送する。
+    //ポータルで描画されるコンテンツ(react-three-fiberのCanvas等)はメインウィンドウのJS実行コンテキストで
+    //動いており、サイズ監視に使われるライブラリ内のresizeリスナーは`window`(=メインウィンドウ)に対して
+    //登録される。ポップアップ側を最大化してもメインウィンドウのresizeは発火しないため、そのままでは
+    //Canvasのサイズが古いまま(=描画が消えて見える)になってしまう。
+    const forwardResize = () => window.dispatchEvent(new Event('resize'));
+    win.addEventListener('resize', forwardResize);
+
     //メイン画面がリロード・遷移・終了した際、ポップアップを閉じ忘れて残留させない
     const handleBeforeUnload = () => {
       if (!win.closed) win.close();
@@ -58,13 +69,17 @@ function NewWindowPortal({ title, width = 800, height = 600, onClose, children }
 
     return () => {
       clearInterval(timer);
+      win.removeEventListener('resize', forwardResize);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       setContainer(null);
+      setPopupWindow(null);
       if (!win.closed) win.close();
     };
   }, [title, width, height]);
 
-  return container ? createPortal(children, container) : null;
+  return container
+    ? createPortal(<PopupWindowContext.Provider value={popupWindow}>{children}</PopupWindowContext.Provider>, container)
+    : null;
 }
 
 export default NewWindowPortal
