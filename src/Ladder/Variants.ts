@@ -1,5 +1,5 @@
 //NONE:空,LD:A接点,LDB:B接点,OUT:コイル,LINE:横線
-export type CellType = "NONE" | "LD" | "LDB" | "OUT" | "LINE";
+export type CellType = "NONE" | "LD" | "LDB" | "LDP" | "LDF" | "TMR" | "OUT" | "LINE" | "INC" | "MOV" | "DMOV" | "BMOV";
 export type CellDevice = string | null;
 export type CellComment = string | null;
 

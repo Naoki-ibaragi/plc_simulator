@@ -31,7 +31,8 @@ export function UserProvider({ storageKey, children }: Props) {
     const [deviceComment,setDeviceComment] = useState(() => loadSavedLadder(storageKey)?.deviceComment ?? createDeviceComment());
     const [initialInput,setInitialInput] = useState('');
     const [showTouchPanel,setShowTouchPanel] = useState(false);
-    const [showEquipment,setShowEquipment] = useState(false);
+    const [showLadder,setShowLadder] = useState(false);
+    const [ladderDoc,setLadderDoc] = useState<Document>(document);
     const copiedCellsRef = useRef<{ cell:CellType, device:CellDevice }[][] | null>(null);
     const lastCloseAtRef = useRef(0);
 
@@ -46,6 +47,17 @@ export function UserProvider({ storageKey, children }: Props) {
       localStorage.setItem(ladderStorageKey(storageKey), JSON.stringify({ ladderMap, deviceComment }));
     }, [storageKey, ladderMap, deviceComment]);
 
+    //ラダーポップアップを閉じたら選択状態をリセットする(ladderDocが元のwindowへ戻った後、
+    //選択したままのセルを探せず操作が空振りするのを防ぐ)
+    useEffect(() => {
+      if (showLadder) return;
+      setIsOpen(false);
+      setSelectedRow(-1);
+      setSelectedCol(-1);
+      setSelectionEndRow(-1);
+      setSelectionEndCol(-1);
+    }, [showLadder]);
+
     //ラダー以外でクリックをしたらセルの選択を外す
     useEffect(() => {
       const handleDocumentClick = (e: MouseEvent) => {
@@ -57,16 +69,16 @@ export function UserProvider({ storageKey, children }: Props) {
               setSelectionEndCol(-1);
           }
       };
-      document.addEventListener('click', handleDocumentClick);
-      return () => document.removeEventListener('click', handleDocumentClick);
-    }, []);
+      ladderDoc.addEventListener('click', handleDocumentClick);
+      return () => ladderDoc.removeEventListener('click', handleDocumentClick);
+    }, [ladderDoc]);
 
     useEffect(() => {
         if (selectedRow === -1 || selectedCol === -1) return;
         let cellEl;
         const openCellEditWindowWithKey = (key: string) => {
             if (isOpen) return;
-            const cellEl = document.querySelector(
+            const cellEl = ladderDoc.querySelector(
                 `[data-ladder-cell][data-row="${selectedRow}"][data-col="${selectedCol}"]`
             );
             if (cellEl) {
@@ -111,7 +123,7 @@ export function UserProvider({ storageKey, children }: Props) {
                       setSelectedRow(newUpRow);
                       setSelectionEndRow(newUpRow);
                       setSelectionEndCol(selectedCol);
-                      cellEl = document.querySelector(
+                      cellEl = ladderDoc.querySelector(
                           `[data-ladder-cell][data-row="${newUpRow}"][data-col="${selectedCol}"]`
                       );
                       cellEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -143,7 +155,7 @@ export function UserProvider({ storageKey, children }: Props) {
                         });
                       }
                       const newDownRow = Math.min(ROW_NUM - 1, selectedRow + 1);
-                      cellEl = document.querySelector(
+                      cellEl = ladderDoc.querySelector(
                           `[data-ladder-cell][data-row="${newDownRow}"][data-col="${selectedCol}"]`
                       );
                       cellEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -336,9 +348,9 @@ export function UserProvider({ storageKey, children }: Props) {
             }
         };
 
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [selectedRow, selectedCol, selectionEndRow, selectionEndCol, isOpen, ladderMap]);
+        ladderDoc.addEventListener('keydown', handleKeyDown);
+        return () => ladderDoc.removeEventListener('keydown', handleKeyDown);
+    }, [selectedRow, selectedCol, selectionEndRow, selectionEndCol, isOpen, ladderMap, ladderDoc]);
 
   return (
     <EditCellStatusContext.Provider
@@ -365,8 +377,10 @@ export function UserProvider({ storageKey, children }: Props) {
             setInitialInput,
             showTouchPanel,
             setShowTouchPanel,
-            showEquipment,
-            setShowEquipment,
+            showLadder,
+            setShowLadder,
+            ladderDoc,
+            setLadderDoc,
         }}
     >
       {children}

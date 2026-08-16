@@ -6,12 +6,13 @@ type Props = {
   title: string,
   width?: number,
   height?: number,
+  resizable?: boolean,
   onClose: () => void,
   children: ReactNode,
 }
 
 //window.openで開いた別ウィンドウのDOMに、同じReactツリー(同じContext)のままchildrenをポータル描画する
-function NewWindowPortal({ title, width = 800, height = 600, onClose, children }: Props) {
+function NewWindowPortal({ title, width = 800, height = 600, resizable = false, onClose, children }: Props) {
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [popupWindow, setPopupWindow] = useState<Window | null>(null);
   const onCloseRef = useRef(onClose);
@@ -21,7 +22,7 @@ function NewWindowPortal({ title, width = 800, height = 600, onClose, children }
   }, [onClose]);
 
   useEffect(() => {
-    const win = window.open('', '', `width=${width},height=${height}`);
+    const win = window.open('', '', `width=${width},height=${height},resizable=${resizable ? 'yes' : 'no'}`);
     if (!win) {
       window.alert('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。');
       onCloseRef.current();
@@ -53,14 +54,6 @@ function NewWindowPortal({ title, width = 800, height = 600, onClose, children }
       }
     }, 500);
 
-    //ポップアップ側のresizeイベントをメインウィンドウへ転送する。
-    //ポータルで描画されるコンテンツ(react-three-fiberのCanvas等)はメインウィンドウのJS実行コンテキストで
-    //動いており、サイズ監視に使われるライブラリ内のresizeリスナーは`window`(=メインウィンドウ)に対して
-    //登録される。ポップアップ側を最大化してもメインウィンドウのresizeは発火しないため、そのままでは
-    //Canvasのサイズが古いまま(=描画が消えて見える)になってしまう。
-    const forwardResize = () => window.dispatchEvent(new Event('resize'));
-    win.addEventListener('resize', forwardResize);
-
     //メイン画面がリロード・遷移・終了した際、ポップアップを閉じ忘れて残留させない
     const handleBeforeUnload = () => {
       if (!win.closed) win.close();
@@ -69,13 +62,12 @@ function NewWindowPortal({ title, width = 800, height = 600, onClose, children }
 
     return () => {
       clearInterval(timer);
-      win.removeEventListener('resize', forwardResize);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       setContainer(null);
       setPopupWindow(null);
       if (!win.closed) win.close();
     };
-  }, [title, width, height]);
+  }, [title, width, height, resizable]);
 
   return container
     ? createPortal(<PopupWindowContext.Provider value={popupWindow}>{children}</PopupWindowContext.Provider>, container)

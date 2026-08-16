@@ -15,15 +15,15 @@ function MainMenu(
     {
         equipmentLabel,
         showTouchPanel, setShowTouchPanel,
-        showEquipment, setShowEquipment,
+        showLadder, setShowLadder,
         mode, tryEnterRun, exitToEdit,
     }:
     {
         equipmentLabel: string,
         showTouchPanel: boolean,
         setShowTouchPanel: React.Dispatch<React.SetStateAction<boolean>>,
-        showEquipment: boolean,
-        setShowEquipment: React.Dispatch<React.SetStateAction<boolean>>,
+        showLadder: boolean,
+        setShowLadder: React.Dispatch<React.SetStateAction<boolean>>,
         mode: runMode,
         tryEnterRun: () => void,
         exitToEdit: () => void,
@@ -93,8 +93,8 @@ function MainMenu(
       <button type='button' className={tabClass(showTouchPanel)} disabled={showTouchPanel} onClick={() => setShowTouchPanel(true)}>
         タッチパネル{showTouchPanel ? '(表示中)' : ''}
       </button>
-      <button type='button' className={tabClass(showEquipment)} disabled={showEquipment} onClick={() => setShowEquipment(true)}>
-        設備モデル{showEquipment ? '(表示中)' : ''}
+      <button type='button' className={tabClass(showLadder)} disabled={showLadder} onClick={() => setShowLadder(true)}>
+        ラダー{showLadder ? '(表示中)' : ''}
       </button>
       <span className='mx-2 h-6 w-px bg-gray-200' />
       {mode === 'EDIT' ? (

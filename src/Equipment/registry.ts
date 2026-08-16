@@ -12,6 +12,8 @@ export const equipmentList: EquipmentEntry[] = [
   { id: 'cylinder', label: 'エアシリンダー', component: lazy(() => import('./Equipment')) },
   { id: 'control-panel', label: '操作パネル', component: lazy(() => import('./ControlPanel')) },
   { id: 'pick-and-place', label: 'ピック&プレース', component: lazy(() => import('./PickAndPlace')) },
+  { id: 'button-patlight', label: '押しボタン&積層信号灯', component: lazy(() => import('./ButtonPatlight')) },
+  { id: 'start-stop', label: 'スタート/ストップ', component: lazy(() => import('./StartStop')) },
 ]
 
 export function getEquipmentById(id: string) {
