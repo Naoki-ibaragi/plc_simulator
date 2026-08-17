@@ -1,5 +1,5 @@
 import React from 'react'
-import { type CellType,type CellDevice, type CellComment} from '../Variants'
+import { type CellType,type CellDevice, type CellComment, COLUMN_NUM} from '../Variants'
 import { useContext } from 'react'
 import { EditCellStatusContext } from '../LadderContext'
 import { RuntimeContext } from '../../Runtime/RuntimeContext'
@@ -15,7 +15,6 @@ function LadderImage({ cell, device, row, col, hasLine, comment }: { cell: CellT
     const rangeColEnd = Math.max(cellEditStatus.selectedCol, cellEditStatus.selectionEndCol);
     const isInRange = cellEditStatus.selectedRow !== -1 && cellEditStatus.selectedCol !== -1 &&
         row >= rangeRowStart && row <= rangeRowEnd && col >= rangeColStart && col <= rangeColEnd;
-    const isSelected = isAnchor || isInRange;
 
     //ランモード中、接点/コイルの現在のON/OFF状態を可視化する(LD/OUT:ONで通電表示、LDB:OFFで通電表示)
     const isEnergized = mode === 'RUN' && !!device && (
@@ -87,10 +86,10 @@ function LadderImage({ cell, device, row, col, hasLine, comment }: { cell: CellT
     }
 
     return (
-        <div data-ladder-cell data-row={row} data-col={col} className={`w-20 ${isInRange && !isAnchor ? 'bg-blue-100' : ''}`} onClick={selectCell} onDoubleClick={editCell}>
+        <div data-ladder-cell data-row={row} data-col={col} className={`shrink-0 w-20 ${isInRange && !isAnchor ? 'bg-blue-100' : ''}`} onClick={selectCell} onDoubleClick={editCell}>
             <svg viewBox="0 0 80 80" className='w-full h-auto block'>
                 <rect x="0.5" y="0.5" width="79" height="79" fill="none" stroke="#d1d5db" strokeDasharray="4 3"/>
-                {isSelected && (
+                {isAnchor && (
                     <rect x="1" y="1" width="78" height="78" fill="none" stroke="#3b82f6" strokeWidth="2"/>
                 )}
                 {device && (
@@ -98,6 +97,8 @@ function LadderImage({ cell, device, row, col, hasLine, comment }: { cell: CellT
                 )}
                 {hasLine[0] && <line x1="0.5" y1="0" x2="0.5" y2="40" stroke="black"/>}
                 {hasLine[1] && <line x1="0.5" y1="40" x2="0.5" y2="80" stroke="black"/>}
+                {col === 0 && <line x1="0" y1="0" x2="0" y2="80" stroke="black" strokeWidth="1.5"/>}
+                {col === COLUMN_NUM - 1 && <line x1="80" y1="0" x2="80" y2="80" stroke="black" strokeWidth="1.5"/>}
                 {isEnergized && <rect x="10" y="25" width="60" height="30" fill="rgba(37, 99, 235, 0.35)"/>}
                 {content}
                 {comment && (

@@ -1,15 +1,6 @@
-import React, { useContext } from 'react'
+import React from 'react'
 import { Link } from 'react-router-dom'
 import { type runMode } from './Runtime/RuntimeContext'
-import { EditCellStatusContext } from './Ladder/LadderContext'
-import { downloadJson, pickJsonFile, readJsonFile } from './fileIO'
-import type { ladderCell } from './Ladder/Variants'
-
-type LadderSaveData = {
-    type: 'ladder',
-    ladderMap: ladderCell[][],
-    deviceComment: { [key: string]: string },
-}
 
 function MainMenu(
     {
@@ -29,30 +20,6 @@ function MainMenu(
         exitToEdit: () => void,
     }
 ) {
-  const { ladderMap, deviceComment, setLadderMap, setDeviceComment } = useContext(EditCellStatusContext);
-
-  const handleSaveLadder = () => {
-    const data: LadderSaveData = { type: 'ladder', ladderMap, deviceComment };
-    downloadJson('ladder.json', data);
-  };
-
-  const handleLoadLadder = async () => {
-    const file = await pickJsonFile();
-    if (!file) return;
-    try {
-      const data = await readJsonFile<LadderSaveData>(file);
-      if (data.type !== 'ladder') {
-        window.alert('ラダー用のファイルではありません');
-        return;
-      }
-      if (!window.confirm('現在のラダーデータを上書きして読み込みます。よろしいですか？')) return;
-      setLadderMap(data.ladderMap);
-      setDeviceComment(data.deviceComment);
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'ファイルの読み込みに失敗しました');
-    }
-  };
-
   const fileButtonClass = `
     px-2 py-1
     text-xs
@@ -84,12 +51,6 @@ function MainMenu(
       </Link>
       <span className='text-sm font-medium text-gray-500'>{equipmentLabel}</span>
       <span className='mx-1 h-6 w-px bg-gray-200' />
-      <button type='button' className={fileButtonClass} onClick={handleSaveLadder}>
-        ラダー保存
-      </button>
-      <button type='button' className={fileButtonClass} onClick={handleLoadLadder}>
-        ラダー読込
-      </button>
       <button type='button' className={tabClass(showTouchPanel)} disabled={showTouchPanel} onClick={() => setShowTouchPanel(true)}>
         タッチパネル{showTouchPanel ? '(表示中)' : ''}
       </button>

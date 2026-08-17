@@ -27,6 +27,8 @@ export type editCellStatus = {
     setShowTouchPanel:React.Dispatch<React.SetStateAction<boolean>>,
     showLadder:boolean,
     setShowLadder:React.Dispatch<React.SetStateAction<boolean>>,
+    showDeviceList:boolean,
+    setShowDeviceList:React.Dispatch<React.SetStateAction<boolean>>,
     ladderDoc:Document,
     setLadderDoc:React.Dispatch<React.SetStateAction<Document>>,
 }
@@ -56,6 +58,8 @@ export const EditCellStatusContext = createContext<editCellStatus>({
     setShowTouchPanel: () => {},
     showLadder: false,
     setShowLadder: () => {},
+    showDeviceList: true,
+    setShowDeviceList: () => {},
     ladderDoc: document,
     setLadderDoc: () => {},
 });

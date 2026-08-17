@@ -32,6 +32,7 @@ export function UserProvider({ storageKey, children }: Props) {
     const [initialInput,setInitialInput] = useState('');
     const [showTouchPanel,setShowTouchPanel] = useState(false);
     const [showLadder,setShowLadder] = useState(false);
+    const [showDeviceList,setShowDeviceList] = useState(true);
     const [ladderDoc,setLadderDoc] = useState<Document>(document);
     const copiedCellsRef = useRef<{ cell:CellType, device:CellDevice }[][] | null>(null);
     const lastCloseAtRef = useRef(0);
@@ -76,6 +77,19 @@ export function UserProvider({ storageKey, children }: Props) {
     useEffect(() => {
         if (selectedRow === -1 || selectedCol === -1) return;
         let cellEl;
+        //cellElを含むスクロール可能な祖先要素を探す(見出し行の分、scrollIntoViewだけでは
+        //先頭行に到達してもscrollTopが0まで戻らず見出し行が隠れたままになるため使う)
+        const findScrollParent = (el: Element | null): HTMLElement | null => {
+            let node = el?.parentElement ?? null;
+            while (node) {
+                const style = ladderDoc.defaultView?.getComputedStyle(node);
+                if (style && /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) {
+                    return node;
+                }
+                node = node.parentElement;
+            }
+            return null;
+        };
         const openCellEditWindowWithKey = (key: string) => {
             if (isOpen) return;
             const cellEl = ladderDoc.querySelector(
@@ -126,7 +140,12 @@ export function UserProvider({ storageKey, children }: Props) {
                       cellEl = ladderDoc.querySelector(
                           `[data-ladder-cell][data-row="${newUpRow}"][data-col="${selectedCol}"]`
                       );
-                      cellEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                      if(newUpRow === 0){
+                        //先頭行では見出し行も含めてウインドウ最上部まで戻す
+                        findScrollParent(cellEl)?.scrollTo({ top: 0 });
+                      } else {
+                        cellEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                      }
                     }
                     break;
                 case 'ArrowDown':
@@ -172,8 +191,9 @@ export function UserProvider({ storageKey, children }: Props) {
                         setSelectionEndCol((prev) => Math.max(0, (prev === -1 ? selectedCol : prev) - 1));
                         break;
                       }
-                      if(e.ctrlKey && selectedCol != 0){
+                      if(e.ctrlKey && selectedCol != 0 && selectedCol != 1){
                         //ctrl+←で、選択中のセルではなく一つ左のセルに横線を引く
+                        //(2列目では一番左の縦線(実線の外枠)に重なってしまうため線を引かない)
                         setLadderMap(prev => {
                           const next = prev.map(row => row.slice());
                           next[selectedRow][selectedCol - 1] = {
@@ -199,8 +219,9 @@ export function UserProvider({ storageKey, children }: Props) {
                         setSelectionEndCol((prev) => Math.min(COLUMN_NUM - 1, (prev === -1 ? selectedCol : prev) + 1));
                         break;
                       }
-                      if(e.ctrlKey && selectedCol != COLUMN_NUM - 1){
+                      if(e.ctrlKey && selectedCol != COLUMN_NUM - 1 && selectedCol != COLUMN_NUM - 2){
                         //ctrl+→で、選択中のセルではなく一つ右のセルに横線を引く
+                        //(9列目では一番右の縦線(実線の外枠)に重なってしまうため線を引かない)
                         setLadderMap(prev => {
                           const next = prev.map(row => row.slice());
                           next[selectedRow][selectedCol + 1] = {
@@ -379,6 +400,8 @@ export function UserProvider({ storageKey, children }: Props) {
             setShowTouchPanel,
             showLadder,
             setShowLadder,
+            showDeviceList,
+            setShowDeviceList,
             ladderDoc,
             setLadderDoc,
         }}
