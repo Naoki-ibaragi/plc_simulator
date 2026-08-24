@@ -1,8 +1,10 @@
-import {MathJax} from 'better-react-mathjax';
+import PageLayout from './PageLayout'
 
 function AboutSimulation() {
   return (
-    <div>AboutSimulation</div>
+    <PageLayout title="当サイトのシミュレータについて">
+      <p>準備中です。もうしばらくお待ちください。</p>
+    </PageLayout>
   )
 }
 
