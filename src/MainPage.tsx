@@ -23,15 +23,15 @@ function MainPage() {
       <div className='mx-auto max-w-4xl px-6 py-12 sm:px-8'>
         <header className='mb-12 text-center'>
           <h1 className='text-3xl font-bold tracking-tight text-gray-900'>PLC学習シミュレータ</h1>
-          <p className='mx-auto mt-4 max-w-xl text-base leading-relaxed text-gray-600'>
-            このサイトはPLCビギナーに向けた学習サイトです。
-            メニュー一覧をこなすことでPLCの概要を理解できるような構成になっています。
-            ブラウザ上で設備シミュレータを作成していますので直感的にPLCを理解できます。
+          <p className='mx-auto mt-4 max-w-l text-base leading-relaxed text-gray-600'>
+            このサイトはPLCビギナーに向けた学習サイトです。<br/>
+            メニューをこなすことでPLCの概要を理解できる構成になっています。<br/>
+            ブラウザ上でラダープログラムを作成し、3D設備モデルを動かしながら直感的にPLCを理解できます。
           </p>
         </header>
 
         <section className='mb-12'>
-          <SectionHeading>学習を始める前にPLCについてもう一度おさらいしましょう</SectionHeading>
+          <SectionHeading>PLCについてもう一度おさらいしましょう</SectionHeading>
           <div className='grid grid-cols-2 gap-3 sm:grid-cols-4'>
             {aboutLinks.map(link => (
               <Link
