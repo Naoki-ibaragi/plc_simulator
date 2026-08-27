@@ -16,6 +16,31 @@ export const equipmentList: EquipmentEntry[] = [
   { id: 'start-stop', label: 'スタート/ストップ', component: lazy(() => import('./StartStop')) },
 ]
 
+//A接点・B接点・コイル用の設備モデル
+export const equipmentListContact: EquipmentEntry[]=[
+  { id: 'button-patlight', label: '押しボタン&積層信号灯', component: lazy(() => import('./ButtonPatlight')) },
+]
+
+//パルス用の設備モデル
+export const equipmentListPulse: EquipmentEntry[]=[
+]
+
+//自己保持回路用の設備モデル
+export const equipmentListSelfHolding: EquipmentEntry[]=[
+]
+
+//数値演算用の設備モデル
+export const equipmentListNumber: EquipmentEntry[]=[
+]
+
+//タイマー用の設備モデル
+export const equipmentListTimer: EquipmentEntry[]=[
+]
+
+//応用編の設備モデル
+export const equipmentListAdvanced: EquipmentEntry[]=[
+]
+
 export function getEquipmentById(id: string) {
   return equipmentList.find(equipment => equipment.id === id)
 }
