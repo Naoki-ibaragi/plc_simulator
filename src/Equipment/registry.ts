@@ -14,6 +14,7 @@ export const equipmentList: EquipmentEntry[] = [
   { id: 'pick-and-place', label: 'ピック&プレース', component: lazy(() => import('./PickAndPlace')) },
   { id: 'button-patlight', label: '押しボタン&積層信号灯', component: lazy(() => import('./ButtonPatlight')) },
   { id: 'start-stop', label: 'スタート/ストップ', component: lazy(() => import('./StartStop')) },
+  { id: 'button-light', label: 'ボタン&ランプ', component: lazy(() => import('./ButtonLight')) },
 ]
 
 //A接点・B接点・コイル用の設備モデル

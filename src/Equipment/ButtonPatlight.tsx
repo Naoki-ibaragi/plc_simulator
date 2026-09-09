@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Environment, Html, OrbitControls, useGLTF } from '@react-three/drei'
 import { Box3, Color, Vector3, type Group, type Mesh, type MeshStandardMaterial, type Object3D } from 'three'
 import { RuntimeContext } from '../Runtime/RuntimeContext'
-import buttonPatlightUrl from './button_patlight.glb'
+import buttonPatlightUrl from './model/button_patlight.glb'
 
 const MODEL_TARGET_SIZE = 3 //CADモデルの単位系(mm等)に関わらず、シーン内で見やすい最大辺長に正規化する
 

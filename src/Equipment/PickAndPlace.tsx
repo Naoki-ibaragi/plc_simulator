@@ -4,7 +4,7 @@ import { Environment, OrbitControls, useGLTF } from '@react-three/drei'
 import { Box3, Vector3, type Group, type Object3D } from 'three'
 import { RuntimeContext } from '../Runtime/RuntimeContext'
 
-const pickAndPlaceUrl = '/pickandplace.glb' //publicフォルダ配置(サイズが大きくバンドラーのアセット処理を通すと失敗するため)
+const pickAndPlaceUrl = './model/pickandplace.glb' //publicフォルダ配置(サイズが大きくバンドラーのアセット処理を通すと失敗するため)
 
 const MODEL_TARGET_SIZE = 3 //CADモデルの単位系(mm等)に関わらず、シーン内で見やすい最大辺長に正規化する
 const Z_DEVICE = 'Y0' //Zスライドを駆動するデバイス

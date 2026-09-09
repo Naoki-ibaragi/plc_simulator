@@ -4,7 +4,7 @@ import { Html, Line, OrbitControls, useGLTF } from '@react-three/drei'
 import { Box3, Vector3, type Group } from 'three'
 import { RuntimeContext } from '../Runtime/RuntimeContext'
 import { usePopupWindow } from '../PopupWindowContext'
-import sensorCountUrl from './sensor_count.glb'
+import sensorCountUrl from './model/sensor_count.glb'
 
 const MODEL_TARGET_SIZE = 3 //CADモデルの単位系(mm等)に関わらず、シーン内で見やすいサイズに正規化する
 const CROSS_DURATION_SEC = 2.5 //ワークが開始位置からテーブル端まで移動するのにかかる時間
