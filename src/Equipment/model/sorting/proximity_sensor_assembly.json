@@ -1,0 +1,10 @@
+{
+  "node": "proximity_sensor",
+  "type": "proximity_sensor",
+  "device": "X2",
+  "tip_target": "tip",
+  "axis": "x",
+  "direction": -1,
+  "range": 10,
+  "work_node": "work"
+}

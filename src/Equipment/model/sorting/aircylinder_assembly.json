@@ -1,0 +1,14 @@
+{
+  "node": "air_cylinder",
+  "type": "aircylinder",
+  "device": "Y1",
+  "rod_target": "rod",
+  "axis": "x",
+  "direction": -1,
+  "stroke": 100,
+  "speed": 80,
+  "work_node": "work",
+  "contact_margin": 5,
+  "sensor_extended": { "target": "autosensor1", "device": "X0" },
+  "sensor_retracted": { "target": "autosensor001", "device": "X1" }
+}

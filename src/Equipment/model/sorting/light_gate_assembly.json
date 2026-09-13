@@ -1,0 +1,11 @@
+{
+  "type": "light_gate",
+  "emitter_node": "light_emitter",
+  "emitter_target": "center",
+  "receiver_node": "light_receiver",
+  "receiver_target": "center001",
+  "receiver_indicator_target": "light",
+  "device": "X3",
+  "beam_width": 15,
+  "work_node": "work"
+}
