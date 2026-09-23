@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-const DEVICE_TYPES = ['X','Y','M','D','T'] as const;
+const DEVICE_TYPES = ['X','Y','M','D','T','CR','R'] as const;
 type DeviceType = typeof DEVICE_TYPES[number];
 
 function DeviceList(
@@ -16,7 +16,11 @@ function DeviceList(
     setDeviceComment(prev => ({...prev, [device]: value}));
   };
 
+  //Rデバイス(位置決めユニット等のリレー)は、設備に割り付けられているときだけ種別に出す
+  const hasRelay = Object.keys(deviceComment).some(device => device.startsWith('R'));
   const filteredDevices = Object.keys(deviceComment).filter(device => device.startsWith(selectedType));
+  //Rは割付表の順(コメントの追加順)ではなく番号順に並べる
+  if(selectedType === 'R') filteredDevices.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
 
   return (
     <div className='h-full w-90 shrink-0 flex flex-col border-r border-gray-200 shadow-sm bg-white'>
@@ -41,7 +45,7 @@ function DeviceList(
             focus:ring-blue-500/20
           '
         >
-          {DEVICE_TYPES.map(type => (
+          {DEVICE_TYPES.filter(type => type !== 'R' || hasRelay).map(type => (
             <option key={type} value={type}>{type}</option>
           ))}
         </select>

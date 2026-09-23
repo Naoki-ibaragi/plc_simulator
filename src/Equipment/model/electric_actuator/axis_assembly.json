@@ -1,0 +1,11 @@
+{
+  "type": "axis",
+  "axis_number": 1,
+  "nodes": [
+    "actuator_stage",
+    "work_table",
+    "work"
+  ],
+  "axis": "y",
+  "direction": 1
+}

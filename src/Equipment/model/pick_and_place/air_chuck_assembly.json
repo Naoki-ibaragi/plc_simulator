@@ -1,0 +1,16 @@
+{
+  "node": "air_chuck_component",
+  "type": "air_chuck",
+  "device": "Y1",
+  "finger_right_target": "finger_right",
+  "finger_left_target": "finger_left",
+  "axis": "x",
+  "direction": 1,
+  "stroke": 6,
+  "speed": 30,
+  "contact_margin": 1.0,
+  "grip_right_target": "chuck_plate_right_body",
+  "grip_left_target": "chuck_plate_left_body",
+  "sensor_open": { "target": "autosensor_open", "device": "X3" },
+  "sensor_close": { "target": "autosensor_close", "device": "X2" }
+}

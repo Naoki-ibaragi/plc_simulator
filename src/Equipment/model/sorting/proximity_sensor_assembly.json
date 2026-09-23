@@ -5,6 +5,6 @@
   "tip_target": "tip",
   "axis": "x",
   "direction": -1,
-  "range": 10,
+  "range": 600,
   "work_node": "work"
 }

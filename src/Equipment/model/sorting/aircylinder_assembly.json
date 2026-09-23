@@ -9,6 +9,6 @@
   "speed": 80,
   "work_node": "work",
   "contact_margin": 5,
-  "sensor_extended": { "target": "autosensor1", "device": "X0" },
-  "sensor_retracted": { "target": "autosensor001", "device": "X1" }
+  "sensor_extended": { "target": "autosensor1", "device": "X5" },
+  "sensor_retracted": { "target": "autosensor001", "device": "X6" }
 }

@@ -1,0 +1,8 @@
+{
+  "node": "button_component_down",
+  "type": "button",
+  "device": "X5",
+  "mode": "momentary",
+  "target": "button001",
+  "stroke": [0, 0, -2]
+}

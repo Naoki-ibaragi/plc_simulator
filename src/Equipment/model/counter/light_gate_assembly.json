@@ -1,0 +1,12 @@
+{
+  "type": "light_gate",
+  "emitter_node": "light_emitter_component",
+  "emitter_target": "center",
+  "receiver_node": "light_receiver_component",
+  "receiver_target": "center001",
+  "receiver_indicator_target": "light",
+  "device": "X1",
+  "mode": "dark_on",
+  "beam_width": 125,
+  "work_node": ["work", "work001", "work002"]
+}

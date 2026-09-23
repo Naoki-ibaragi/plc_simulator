@@ -1,0 +1,7 @@
+{
+  "node": "lamp_component_close",
+  "type": "light",
+  "device": "Y5",
+  "color": "#e04b4b",
+  "target": "light003"
+}

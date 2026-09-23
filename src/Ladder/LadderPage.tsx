@@ -18,6 +18,7 @@ import { getEquipmentById, type EquipmentEntry } from '../Equipment/registry'
 import EquipmentLoading from '../Equipment/EquipmentLoading'
 import { downloadJson, pickJsonFile, readJsonFile } from '../fileIO'
 import type { ladderCell } from './Variants'
+import { createAxisRelayComments } from '../Runtime/axisUnit'
 
 type LadderSaveData = {
     type: 'ladder',
@@ -37,7 +38,7 @@ const ladderToolButtonClass = `
 `;
 
 function LadderPageContent({ equipment }: { equipment: EquipmentEntry }) {
-  const { ladderMap,showTouchPanel,setShowTouchPanel,showLadder,setShowLadder } = useContext(EditCellStatusContext);
+  const { ladderMap,showTouchPanel,setShowTouchPanel,showLadder,setShowLadder,selectedRow,insertCommentRow } = useContext(EditCellStatusContext);
   const { deviceComment,setDeviceComment,setLadderMap,showDeviceList,setShowDeviceList,ladderDoc } = useContext(EditCellStatusContext);
   const { mode, compileErrors, tryEnterRun, exitToEdit } = useContext(RuntimeContext);
   const EquipmentComponent = equipment.component;
@@ -95,6 +96,16 @@ function LadderPageContent({ equipment }: { equipment: EquipmentEntry }) {
                 デバイスリスト{showDeviceList ? '非表示' : '表示'}
               </button>
               <span className='mx-1 h-6 w-px bg-gray-200' />
+              <button
+                type='button'
+                data-keep-ladder-selection
+                className={`${ladderToolButtonClass} disabled:opacity-40 disabled:hover:bg-transparent`}
+                disabled={mode === 'RUN' || selectedRow < 0}
+                onClick={insertCommentRow}
+              >
+                行コメント挿入
+              </button>
+              <span className='mx-1 h-6 w-px bg-gray-200' />
               <button type='button' className={ladderToolButtonClass} onClick={handleSaveLadder}>
                 ラダー保存
               </button>
@@ -136,9 +147,11 @@ function LadderPage() {
 
   if (!equipmentId || !equipment) return <Navigate to='/' replace />;
 
+  const axisRelayComments = equipment.axisUnit ? createAxisRelayComments(equipment.axisUnit.axes.length) : undefined;
+
   return (
-    <UserProvider key={equipmentId} storageKey={equipmentId}>
-      <RuntimeProvider>
+    <UserProvider key={equipmentId} storageKey={equipmentId} defaultDeviceComment={axisRelayComments}>
+      <RuntimeProvider axisUnit={equipment.axisUnit}>
         <TpProvider storageKey={equipmentId}>
           <LadderPageContent equipment={equipment} />
         </TpProvider>

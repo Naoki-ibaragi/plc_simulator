@@ -5,7 +5,7 @@ import Lamp from './Components/Lamp'
 import Button from './Components/Button'
 import Text from './Components/Text'
 import { LADDER_WIDTH } from '../layoutConstants'
-import { RuntimeContext } from '../Runtime/RuntimeContext'
+import { RuntimeContext, DeviceValueContext } from '../Runtime/RuntimeContext'
 
 const ELEMENT_SIZE = 40 //w-10 h-10
 const ELEMENT_RADIUS = ELEMENT_SIZE / 2 //ドロップ位置を要素の中心に合わせるためのオフセット
@@ -13,7 +13,8 @@ const MOVE_DATA_TYPE = "application/x-tp-move" //配置済み要素の移動で�
 
 function Touchpanel() {
   const tpStatus = useContext(TpContext);
-  const { mode, deviceValue, setInputDevice } = useContext(RuntimeContext);
+  const { mode, setInputDevice } = useContext(RuntimeContext);
+  const deviceValue = useContext(DeviceValueContext);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const clamp = (value: number, max: number) => Math.max(0, Math.min(value, max));

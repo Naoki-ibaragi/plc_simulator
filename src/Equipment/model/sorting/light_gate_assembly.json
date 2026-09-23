@@ -6,6 +6,6 @@
   "receiver_target": "center001",
   "receiver_indicator_target": "light",
   "device": "X3",
-  "beam_width": 15,
+  "beam_width": 500,
   "work_node": "work"
 }

@@ -1,0 +1,13 @@
+{
+  "node": "air_cylinder_component",
+  "type": "aircylinder",
+  "device": "Y0",
+  "rod_target": "cylinder_rod",
+  "axis": "x",
+  "direction": 1,
+  "stroke": -100,
+  "speed": 60,
+  "sensor_retracted": { "target": "cylinder_autosensor_top", "device": "X1" },
+  "sensor_extended": { "target": "cylinder_autosensor_bottom", "device": "X0" },
+  "carry_nodes": ["air_chuck_component", "connect_parts"]
+}

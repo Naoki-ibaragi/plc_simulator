@@ -1,0 +1,8 @@
+{
+  "node": "button_component_close",
+  "type": "button",
+  "device": "X7",
+  "mode": "momentary",
+  "target": "button003",
+  "stroke": [0, 0, -2]
+}

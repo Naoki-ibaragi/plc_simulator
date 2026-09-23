@@ -1,0 +1,8 @@
+{
+  "node": "button_component",
+  "type": "button",
+  "device": "X0",
+  "mode": "momentary",
+  "target": "button",
+  "stroke": [0, 0, -2]
+}

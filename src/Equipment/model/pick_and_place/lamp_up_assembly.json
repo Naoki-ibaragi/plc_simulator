@@ -1,0 +1,7 @@
+{
+  "node": "lamp_component_up",
+  "type": "light",
+  "device": "Y2",
+  "color": "#3f95f5",
+  "target": "light"
+}

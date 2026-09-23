@@ -1,0 +1,10 @@
+{
+  "node": "belt_combair_component",
+  "type": "combair",
+  "device": "Y0",
+  "work_node": ["work", "work001", "work002"],
+  "velocity": [100, 0, 0],
+  "contact_margin": 5,
+  "release": "clear",
+  "flag_targets": ["flag", "flag001"]
+}

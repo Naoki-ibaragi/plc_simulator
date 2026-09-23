@@ -1,0 +1,6 @@
+{
+  "type": "gravity",
+  "work_node": ["work", "work001", "work002"],
+  "floor_node": "work_table",
+  "speed": 200
+}

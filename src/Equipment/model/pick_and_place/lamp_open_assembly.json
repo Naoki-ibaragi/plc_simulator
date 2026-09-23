@@ -1,0 +1,7 @@
+{
+  "node": "lamp_component_open",
+  "type": "light",
+  "device": "Y4",
+  "color": "#3f954b",
+  "target": "light002"
+}

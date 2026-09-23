@@ -3,5 +3,6 @@
   "type": "combair",
   "device": "Y0",
   "work_node": "work",
-  "velocity": [100, 0, 0]
+  "velocity": [100, 0, 0],
+  "contact_margin": 0.01
 }
