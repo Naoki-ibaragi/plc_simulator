@@ -1,5 +1,5 @@
 {
-  "node": "light_assembly",
+  "node": "lamp_component",
   "type": "light",
   "device": "Y0",
   "color": "red"

@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { Html, OrbitControls, useGLTF } from '@react-three/drei'
 import { Box3, Color, Quaternion, Vector3, type Group, type Mesh, type MeshStandardMaterial, type Object3D } from 'three'
 import { RuntimeContext, DeviceValueContext } from '../Runtime/RuntimeContext'
+import { FactoryEnvironment, FACTORY_HALF_SIZE } from './FactoryEnvironment'
 
 const MODEL_TARGET_SIZE = 6 //CADモデルの単位系(mm等)に関わらず、シーン内で見やすい最大辺長に正規化する
 const STROKE_SPEED = 0.02 //ボタンストロークの追従速度(m/s相当)
@@ -1240,13 +1241,14 @@ function AssemblyEquipment({ modelUrl, modelFolder, modelRotationDeg, cameraPosi
         <ambientLight intensity={1.5} />
         <directionalLight position={[5, 8, 5]} intensity={2} />
         <directionalLight position={[-5, 4, -5]} intensity={1} />
-        <gridHelper args={[20, 20]} />
+        <FactoryEnvironment />
 
         <Suspense fallback={null}>
           <AssemblyModelScene modelUrl={modelUrl} modelFolder={modelFolder} modelRotationDeg={modelRotationDeg} resetToken={resetToken} />
         </Suspense>
 
-        <OrbitControls enableDamping={false} />
+        {/* 建屋の壁の外側や床下にカメラが回り込まないよう制限する */}
+        <OrbitControls enableDamping={false} maxDistance={FACTORY_HALF_SIZE - 2} maxPolarAngle={Math.PI / 2 - 0.05} />
       </Canvas>
 
       <button

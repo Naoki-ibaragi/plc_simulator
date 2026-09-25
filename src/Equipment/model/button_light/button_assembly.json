@@ -1,6 +1,8 @@
 {
-  "node": "button_assembly",
+  "node": "button_component",
   "type": "button",
-  "device": "X1",
-  "stroke": [0, -2, 0]
+  "mode": "momentary",
+  "target": "button",
+  "device": "X0",
+  "stroke": [0, 0, -2]
 }
