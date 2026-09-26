@@ -101,6 +101,26 @@ fn parse_word(token: &str) -> Result<i64> {
         .map_err(|_| HostLinkError::InvalidResponse(token.to_string()))
 }
 
+fn parse_hex_word(token: &str) -> Result<u16> {
+    u16::from_str_radix(token, 16).map_err(|_| HostLinkError::InvalidResponse(token.to_string()))
+}
+
+//チャンネル(16点)単位で読み出せるリレー系デバイス。番号は「チャンネル×100+ビット(00~15)」の10進表記
+//(例: R58015 = 580ch ビット15、R015 = 0ch ビット15)
+const CHANNEL_RELAY_PREFIXES: [&str; 4] = ["R", "MR", "LR", "CR"];
+
+/// リレー系デバイスを(種別, チャンネル, ビット)に分解する。対象外のデバイスはNone
+pub fn parse_channel_relay(device: &str) -> Option<(String, u32, u8)> {
+    let digits_at = device.find(|c: char| c.is_ascii_digit())?;
+    let (prefix, digits) = device.split_at(digits_at);
+    if !CHANNEL_RELAY_PREFIXES.contains(&prefix) || !digits.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let number: u32 = digits.parse().ok()?;
+    let (channel, bit) = (number / 100, number % 100);
+    (bit < 16).then(|| (prefix.to_string(), channel, bit as u8))
+}
+
 fn parse_list<T>(response: &str, expected: usize, parse: fn(&str) -> Result<T>) -> Result<Vec<T>> {
     let values = response
         .split_whitespace()
@@ -195,6 +215,18 @@ impl HostLinkClient {
     pub async fn write_word(&mut self, device: &str, value: i64) -> Result<()> {
         let device = word_device(&normalize_device(device)?);
         expect_ok(self.query(&format!("WR {device} {value}")).await?)
+    }
+
+    /// リレー系デバイスをチャンネル(16点)単位で連続読出しする(RDS R58000.H 4 等)。
+    /// 戻り値の各ワードはビット0がそのチャンネルのxx00、ビット15がxx15に対応する
+    pub async fn read_relay_channels(&mut self, prefix: &str, start_channel: u32, count: usize) -> Result<Vec<u16>> {
+        if !CHANNEL_RELAY_PREFIXES.contains(&prefix) {
+            return Err(HostLinkError::InvalidDevice(prefix.to_string()));
+        }
+        let response = self
+            .query(&format!("RDS {prefix}{start_channel}00.H {count}"))
+            .await?;
+        parse_list(&response, count, parse_hex_word)
     }
 
     /// ビットデバイスのモニタ登録(MBS)。登録後はread_bit_monitorで一括読出しできる
@@ -347,6 +379,32 @@ mod tests {
         assert!(client.read_bit_monitor(2).await.is_err());
     }
 
+    #[test]
+    fn parses_channel_relays() {
+        assert_eq!(parse_channel_relay("R58015"), Some(("R".into(), 580, 15)));
+        assert_eq!(parse_channel_relay("R000"), Some(("R".into(), 0, 0)));
+        assert_eq!(parse_channel_relay("R5"), Some(("R".into(), 0, 5)));
+        assert_eq!(parse_channel_relay("MR1203"), Some(("MR".into(), 12, 3)));
+        assert_eq!(parse_channel_relay("R58016"), None); //ビットは00~15のみ
+        assert_eq!(parse_channel_relay("DM100"), None);
+        assert_eq!(parse_channel_relay("X10"), None);
+        assert_eq!(parse_channel_relay("B1A"), None);
+    }
+
+    #[tokio::test]
+    async fn reads_relay_channels_as_hex_words() {
+        let plc = mock::spawn(|cmd| match cmd {
+            "RDS R58000.H 2" => "0001 8000".into(),
+            "RDS R000.H 1" => "FFFF".into(),
+            _ => "E1".into(),
+        })
+        .await;
+        let mut client = connect(plc.port).await;
+        assert_eq!(client.read_relay_channels("R", 580, 2).await.unwrap(), vec![0x0001, 0x8000]);
+        assert_eq!(client.read_relay_channels("R", 0, 1).await.unwrap(), vec![0xFFFF]);
+        assert!(client.read_relay_channels("DM", 0, 1).await.is_err());
+    }
+
     #[tokio::test]
     async fn rejects_injected_commands() {
         let plc = mock::spawn(|_| "OK".into()).await;
@@ -375,6 +433,23 @@ mod tests {
         match client.register_word_monitor(&["DM0".into(), "DM1".into()]).await {
             Ok(()) => println!("MWR: {:?}", client.read_word_monitor(2).await.unwrap()),
             Err(e) => println!("MWS非対応: {e}"),
+        }
+    }
+
+    /// チャンネル読出し(.H)のビット順がxx00=ビット0であることを確認する。R58000/R58015を一時的にONにして戻す。
+    /// cargo test -- --ignored --nocapture kv_simulator_relay で実行
+    #[tokio::test]
+    #[ignore]
+    async fn kv_simulator_relay_bit_order() {
+        let mut client = HostLinkClient::connect("127.0.0.1", 8501, Duration::from_secs(2))
+            .await
+            .expect("シミュレータに接続できません");
+        for (device, expected) in [("R58000", 0x0001u16), ("R58015", 0x8000)] {
+            client.write_bit(device, true).await.unwrap();
+            let words = client.read_relay_channels("R", 580, 1).await.unwrap();
+            client.write_bit(device, false).await.unwrap();
+            println!("{device} ON → R580ch = {:04X}", words[0]);
+            assert_eq!(words[0] & expected, expected, "{device} がビット位置と一致しません");
         }
     }
 }

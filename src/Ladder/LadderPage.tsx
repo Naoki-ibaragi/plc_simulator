@@ -1,4 +1,4 @@
-import { Suspense, useContext } from 'react'
+import { Suspense, useContext, useMemo, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import LadderDisplay from './LadderDisplay'
 import CellEditWindow from './CellEditWindow'
@@ -19,6 +19,10 @@ import EquipmentLoading from '../Equipment/EquipmentLoading'
 import { downloadJson, pickJsonFile, readJsonFile } from '../fileIO'
 import type { ladderCell } from './Variants'
 import { createAxisRelayComments } from '../Runtime/axisUnit'
+import { TpContext } from '../Touchpanel/TpContext'
+import { useIoSignals } from '../Runtime/useIoSignals'
+import { type IoSignal } from '../Runtime/ioMap'
+import IoMapWindow from '../IoMap/IoMapWindow'
 
 type LadderSaveData = {
     type: 'ladder',
@@ -40,8 +44,20 @@ const ladderToolButtonClass = `
 function LadderPageContent({ equipment }: { equipment: EquipmentEntry }) {
   const { ladderMap,showTouchPanel,setShowTouchPanel,showLadder,setShowLadder,selectedRow,insertCommentRow } = useContext(EditCellStatusContext);
   const { deviceComment,setDeviceComment,setLadderMap,showDeviceList,setShowDeviceList,ladderDoc } = useContext(EditCellStatusContext);
-  const { mode, compileErrors, tryEnterRun, exitToEdit } = useContext(RuntimeContext);
+  const { mode, compileErrors, tryEnterRun, exitToEdit, kvLink } = useContext(RuntimeContext);
+  const { tpElements } = useContext(TpContext);
   const EquipmentComponent = equipment.component;
+
+  const [showIoMap, setShowIoMap] = useState(false);
+
+  //タッチパネルのランプ(PLC→表示)/ボタン(操作→PLC)もI/O割付の対象にする(ポップアップを開いていなくても登録しておく)
+  const tpSignals = useMemo(() => tpElements.flatMap((el): IoSignal[] => {
+    if (el.elementType === 'TEXT' || !el.bitDevice) return [];
+    return [el.elementType === 'LAMP'
+      ? { device: el.bitDevice, direction: 'output', label: 'タッチパネル ランプ', source: 'touchpanel' }
+      : { device: el.bitDevice, direction: 'input', label: 'タッチパネル ボタン', source: 'touchpanel' }];
+  }), [tpElements]);
+  useIoSignals('touchpanel', tpSignals);
 
   const handleSaveLadder = () => {
     const data: LadderSaveData = { type: 'ladder', ladderMap, deviceComment };
@@ -72,6 +88,8 @@ function LadderPageContent({ equipment }: { equipment: EquipmentEntry }) {
         showTouchPanel={showTouchPanel} setShowTouchPanel={setShowTouchPanel}
         showLadder={showLadder} setShowLadder={setShowLadder}
         mode={mode} tryEnterRun={tryEnterRun} exitToEdit={exitToEdit}
+        kvLink={kvLink}
+        showIoMap={showIoMap} setShowIoMap={setShowIoMap}
       />
       <div className='flex-1 min-h-0'>
         <Suspense fallback={<EquipmentLoading />}>
@@ -85,6 +103,11 @@ function LadderPageContent({ equipment }: { equipment: EquipmentEntry }) {
             {mode === 'EDIT' && <TpElementBar />}
             <TpElementEditWindow />
           </div>
+        </NewWindowPortal>
+      )}
+      {showIoMap && (
+        <NewWindowPortal title='I/O割付' width={860} height={600} resizable onClose={() => setShowIoMap(false)}>
+          <IoMapWindow />
         </NewWindowPortal>
       )}
       {showLadder && (
@@ -151,7 +174,7 @@ function LadderPage() {
 
   return (
     <UserProvider key={equipmentId} storageKey={equipmentId} defaultDeviceComment={axisRelayComments}>
-      <RuntimeProvider axisUnit={equipment.axisUnit}>
+      <RuntimeProvider axisUnit={equipment.axisUnit} storageKey={equipmentId}>
         <TpProvider storageKey={equipmentId}>
           <LadderPageContent equipment={equipment} />
         </TpProvider>

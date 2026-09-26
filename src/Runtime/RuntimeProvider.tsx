@@ -5,15 +5,27 @@ import { EditCellStatusContext } from "../Ladder/LadderContext";
 import { createDeviceValue, type WordValue } from "../Ladder/Variants";
 import { compileLadder, evaluateScan, type LadderCompileError, type TimerState } from "../Ladder/ladderEngine";
 import { createAxisStates, stepAxisUnit, type AxisState, type AxisUnitConfig } from "./axisUnit";
+import { isKvLinkAvailable, kvConnect, kvDisconnect, kvSetWatch, kvWriteBit, onKvStatus, onKvValues } from "./kvLink";
+import { loadKvIoMap, mergeIoSignals, resolveKvDevice, saveKvIoMap, type IoSignal, type KvIoMap } from "./ioMap";
 
 const SCAN_INTERVAL_MS = 5;
 
 interface Props {
     axisUnit?:AxisUnitConfig; //設備に位置決めユニットがある場合のみ指定する
+    storageKey:string; //I/O割付を設備ごとに保存するためのキー(設備モデルID)
     children:ReactNode;
 }
 
-export function RuntimeProvider({ axisUnit, children }:Props) {
+//KVから周期読出しするのは出力信号(PLC→アプリ)だけ。入力信号はアプリが書き込む側なので読む必要がない
+function kvOutputDevices(signals:IoSignal[], map:KvIoMap):string[] {
+    const devices = signals
+        .filter(signal => signal.direction === "output")
+        .map(signal => resolveKvDevice(map, signal.device))
+        .filter((device): device is string => device !== null);
+    return [...new Set(devices)].sort();
+}
+
+export function RuntimeProvider({ axisUnit, storageKey, children }:Props) {
     const { ladderMap } = useContext(EditCellStatusContext);
 
     const [mode, setMode] = useState<runMode>("EDIT");
@@ -60,16 +72,132 @@ export function RuntimeProvider({ axisUnit, children }:Props) {
         setMode("EDIT");
     }, [resetDeviceValue]);
 
+    //---- KV STUDIOシミュレータ連携 ----
+    const [kvActive, setKvActive] = useState(false);
+    const [kvConnecting, setKvConnecting] = useState(false);
+    const [kvError, setKvError] = useState<string | null>(null);
+    //イベントハンドラから最新の状態を参照するためrefでも持つ(refの更新は描画中ではなく各setter内で行う)
+    const kvActiveRef = useRef(false);
+    //アプリからKVへ書き込んだ入力の値(KVデバイス名→値)。同じ値の再送を防ぎ、周期読出しの値よりこちらを優先する
+    const kvWrittenRef = useRef<Record<string, boolean>>({});
+
+    //設備モデル/タッチパネルが使う信号と、そのKVデバイスへの割付
+    const signalOwnersRef = useRef<Record<string, IoSignal[]>>({});
+    const [ioSignals, setIoSignals] = useState<IoSignal[]>([]);
+    const ioSignalsRef = useRef<IoSignal[]>([]);
+    const [kvIoMap, setKvIoMapState] = useState<KvIoMap>(() => loadKvIoMap(storageKey));
+    const kvIoMapRef = useRef(kvIoMap);
+
+    const registerIoSignals = useCallback((owner:string, signals:IoSignal[]) => {
+        signalOwnersRef.current = { ...signalOwnersRef.current, [owner]: signals };
+        const next = mergeIoSignals(Object.values(signalOwnersRef.current).flat());
+        if(JSON.stringify(next) === JSON.stringify(ioSignalsRef.current)) return;
+        ioSignalsRef.current = next;
+        setIoSignals(next);
+    }, []);
+
+    const setKvIoMap = useCallback((map:KvIoMap) => {
+        kvIoMapRef.current = map;
+        setKvIoMapState(map);
+        saveKvIoMap(storageKey, map);
+    }, [storageKey]);
+
+    const endKvLink = useCallback((error:string | null) => {
+        if(!kvActiveRef.current){
+            if(error) setKvError(error);
+            return;
+        }
+        kvActiveRef.current = false;
+        kvWrittenRef.current = {};
+        setKvActive(false);
+        setKvError(error);
+        resetDeviceValue();
+        setMode("EDIT");
+    }, [resetDeviceValue]);
+
+    const connectKv = useCallback(async () => {
+        if(!isKvLinkAvailable() || kvActiveRef.current) return;
+        setKvConnecting(true);
+        setKvError(null);
+        setCompileErrors([]);
+        resetDeviceValue();
+        kvWrittenRef.current = {};
+        //接続直後に届く最初の読出し結果を取りこぼさないよう、応答を待つ前から受信を有効にしておく
+        kvActiveRef.current = true;
+        try{
+            await kvConnect({ bits: kvOutputDevices(ioSignalsRef.current, kvIoMapRef.current), words: [] });
+            setKvActive(true);
+            setMode("RUN");
+        }catch(e){
+            kvActiveRef.current = false;
+            setKvError(String(e));
+        }finally{
+            setKvConnecting(false);
+        }
+    }, [resetDeviceValue]);
+
+    const disconnectKv = useCallback(() => {
+        kvDisconnect().catch(() => {});
+        endKvLink(null);
+    }, [endKvLink]);
+
+    //KVからの周期読出し結果と切断通知を受け取る
+    useEffect(() => {
+        if(!isKvLinkAvailable()) return;
+        const unlisteners = [
+            onKvValues(values => {
+                if(!kvActiveRef.current) return;
+                //KVデバイスの値を、割付元の信号(内蔵ラダー用の名前)の値として反映する
+                const next = { ...deviceValueRef.current };
+                for(const signal of ioSignalsRef.current){
+                    if(signal.direction !== "output") continue;
+                    const kvDevice = resolveKvDevice(kvIoMapRef.current, signal.device);
+                    if(!kvDevice || !(kvDevice in values.bits)) continue;
+                    //アプリが書き込むデバイスはアプリ側の値を正とする(書込みが反映される前の古い読出し値で戻らないように)
+                    if(kvDevice in kvWrittenRef.current) continue;
+                    next[signal.device] = values.bits[kvDevice];
+                }
+                deviceValueRef.current = next;
+                setDeviceValue(next);
+            }),
+            onKvStatus(status => {
+                if(!status.connected) endKvLink(status.error);
+            }),
+        ];
+        return () => {
+            unlisteners.forEach(promise => promise.then(unlisten => unlisten()));
+        };
+    }, [endKvLink]);
+
+    //連携中に信号(設備・タッチパネル)や割付が変わったらKV側の読出し対象も差し替える
+    const kvWatchKey = useMemo(() => kvOutputDevices(ioSignals, kvIoMap).join(","), [ioSignals, kvIoMap]);
+    useEffect(() => {
+        if(!kvActive) return;
+        kvSetWatch({ bits: kvWatchKey ? kvWatchKey.split(",") : [], words: [] }).catch(e => setKvError(String(e)));
+    }, [kvActive, kvWatchKey]);
+
+    //連携中に設備ページを離れた場合も接続を残さない
+    useEffect(() => () => {
+        if(kvActiveRef.current) kvDisconnect().catch(() => {});
+    }, []);
+
     const setInputDevice = useCallback((device:string, value:boolean) => {
+        if(kvActiveRef.current){
+            const kvDevice = resolveKvDevice(kvIoMapRef.current, device);
+            if(kvDevice && kvWrittenRef.current[kvDevice] !== value){
+                kvWrittenRef.current[kvDevice] = value;
+                kvWriteBit(kvDevice, value).catch(e => setKvError(String(e)));
+            }
+        }
         //センサー等が毎フレーム現在値を書き込んでも、値が変わらなければ再レンダーしない
         if(deviceValueRef.current[device] === value) return;
         deviceValueRef.current = { ...deviceValueRef.current, [device]: value };
         setDeviceValue(deviceValueRef.current);
     }, []);
 
-    //ランモード中は一定周期でラダーをスキャンし、デバイス値を更新する
+    //ランモード中は一定周期でラダーをスキャンし、デバイス値を更新する(KV連携中はKV側がスキャンするので行わない)
     useEffect(() => {
-        if(mode !== "RUN") return;
+        if(mode !== "RUN" || kvActive) return;
         let lastScanAt = performance.now();
         const timer = setInterval(() => {
             const now = performance.now();
@@ -107,7 +235,7 @@ export function RuntimeProvider({ axisUnit, children }:Props) {
             setWordValue(nextWordValue);
         }, SCAN_INTERVAL_MS);
         return () => clearInterval(timer);
-    }, [mode, axisUnit]);
+    }, [mode, kvActive, axisUnit]);
 
     //mode/compileErrors等はランモード中ずっと変化しないため、deviceValueと同じcontext値に含めてしまうと
     //deviceValueの更新(100ms毎)のたびにmodeしか見ていないコンポーネントまで再レンダーされてしまう。
@@ -117,9 +245,22 @@ export function RuntimeProvider({ axisUnit, children }:Props) {
         compileErrors,
         setInputDevice,
         tryEnterRun,
-        exitToEdit,
+        //KV連携中に「編集に戻る」が押された場合は連携を終了する
+        exitToEdit: kvActive ? disconnectKv : exitToEdit,
         axisPositionsRef,
-    }), [mode, compileErrors, setInputDevice, tryEnterRun, exitToEdit]);
+        kvLink: {
+            available: isKvLinkAvailable(),
+            active: kvActive,
+            connecting: kvConnecting,
+            error: kvError,
+            connect: () => { void connectKv(); },
+            disconnect: disconnectKv,
+        },
+        registerIoSignals,
+        ioSignals,
+        kvIoMap,
+        setKvIoMap,
+    }), [mode, compileErrors, setInputDevice, tryEnterRun, exitToEdit, kvActive, kvConnecting, kvError, connectKv, disconnectKv, registerIoSignals, ioSignals, kvIoMap, setKvIoMap]);
 
     return (
         <RuntimeContext.Provider value={runtimeStatusValue}>

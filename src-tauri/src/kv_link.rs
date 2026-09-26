@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, State};
 use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::time::Instant;
 
-use crate::hostlink::{normalize_device, HostLinkClient, HostLinkError, MONITOR_MAX};
+use crate::hostlink::{normalize_device, parse_channel_relay, HostLinkClient, HostLinkError, MONITOR_MAX};
 
 //監視デバイスの値が変化したときに送るイベント(payload: DeviceSnapshot)
 pub const VALUES_EVENT: &str = "kv-link:values";
@@ -59,10 +59,37 @@ enum ReadMode {
     Individual,
 }
 
+//リレー系デバイスはチャンネル(16点)単位のRDSでまとめて読む。離れたチャンネルもこの間隔以内なら1コマンドにまとめる
+//(不要なチャンネルを数ワード余分に読む方が、往復回数を増やすより速い)
+const CHANNEL_MERGE_GAP: u32 = 16;
+const RDS_MAX_COUNT: usize = 1000;
+
+//RDS {prefix}{start}00.H {count} で読むチャンネル範囲と、そこから取り出すビット
+struct ChannelGroup {
+    prefix: String,
+    start: u32,
+    count: usize,
+    //(bitsの添字, 読出し結果のワード位置, ビット位置)
+    members: Vec<(usize, usize, u8)>,
+}
+
+#[derive(Default)]
+struct BitPlan {
+    groups: Vec<ChannelGroup>,
+    //チャンネル読出しできないデバイス(X/Y等)。bitsの添字でRDにより1点ずつ読む
+    singles: Vec<usize>,
+}
+
+enum BitReader {
+    //モニタ登録(MBS)して1コマンドで一括読出し
+    Monitor,
+    Plan(BitPlan),
+}
+
 struct PreparedWatch {
     bits: Vec<String>,
     words: Vec<String>,
-    bit_mode: ReadMode,
+    bit_reader: BitReader,
     word_mode: ReadMode,
 }
 
@@ -70,6 +97,57 @@ impl PreparedWatch {
     fn to_watch_list(&self) -> WatchList {
         WatchList { bits: self.bits.clone(), words: self.words.clone() }
     }
+}
+
+fn plan_bit_reads(bits: &[String]) -> BitPlan {
+    let mut plan = BitPlan::default();
+    let mut by_prefix: BTreeMap<String, Vec<(u32, u8, usize)>> = BTreeMap::new();
+    for (index, device) in bits.iter().enumerate() {
+        match parse_channel_relay(device) {
+            Some((prefix, channel, bit)) => by_prefix.entry(prefix).or_default().push((channel, bit, index)),
+            None => plan.singles.push(index),
+        }
+    }
+    for (prefix, mut entries) in by_prefix {
+        entries.sort();
+        let mut current: Option<ChannelGroup> = None;
+        for (channel, bit, index) in entries {
+            if let Some(group) = current.as_mut() {
+                let end = group.start + group.count as u32;
+                let span = (channel - group.start) as usize + 1;
+                if channel < end || (channel - end <= CHANNEL_MERGE_GAP && span <= RDS_MAX_COUNT) {
+                    group.count = group.count.max(span);
+                    group.members.push((index, (channel - group.start) as usize, bit));
+                    continue;
+                }
+                plan.groups.extend(current.take());
+            }
+            current = Some(ChannelGroup { prefix: prefix.clone(), start: channel, count: 1, members: vec![(index, 0, bit)] });
+        }
+        plan.groups.extend(current);
+    }
+    plan
+}
+
+//存在しないデバイスがあると毎周期エラーになるため、ここで一度読んで確認する。
+//チャンネル読出しに失敗した範囲は1点ずつ読む方式に切り替える
+async fn verify_bit_plan(client: &mut HostLinkClient, bits: &[String], plan: BitPlan) -> Result<BitPlan, HostLinkError> {
+    let mut verified = BitPlan { groups: Vec::new(), singles: plan.singles };
+    for group in plan.groups {
+        match client.read_relay_channels(&group.prefix, group.start, group.count).await {
+            Ok(_) => verified.groups.push(group),
+            Err(e) if e.is_fatal() => return Err(e),
+            Err(e) => {
+                log::warn!("{}{}00から{}ch分のチャンネル読出しに失敗したため1点ずつ読み出します: {e}", group.prefix, group.start, group.count);
+                verified.singles.extend(group.members.iter().map(|&(index, _, _)| index));
+            }
+        }
+    }
+    verified.singles.sort();
+    for &index in &verified.singles {
+        client.read_bit(&bits[index]).await.map_err(|e| with_device(e, &bits[index]))?;
+    }
+    Ok(verified)
 }
 
 async fn prepare_watch(client: &mut HostLinkClient, watch: WatchList) -> Result<PreparedWatch, HostLinkError> {
@@ -86,21 +164,19 @@ async fn prepare_watch(client: &mut HostLinkClient, watch: WatchList) -> Result<
     let bits = normalize(watch.bits)?;
     let words = normalize(watch.words)?;
 
-    let bit_mode = choose_mode(bits.len(), client.register_bit_monitor(&bits)).await?;
+    let bit_reader = match choose_mode(bits.len(), client.register_bit_monitor(&bits)).await? {
+        ReadMode::Monitor => BitReader::Monitor,
+        ReadMode::Individual => BitReader::Plan(verify_bit_plan(client, &bits, plan_bit_reads(&bits)).await?),
+    };
     let word_mode = choose_mode(words.len(), client.register_word_monitor(&words)).await?;
 
     //1点ずつ読む場合は存在しないデバイスがあると毎周期エラーになるため、ここで一度読んで確認する
-    if bit_mode == ReadMode::Individual {
-        for device in &bits {
-            client.read_bit(device).await.map_err(|e| with_device(e, device))?;
-        }
-    }
     if word_mode == ReadMode::Individual {
         for device in &words {
             client.read_word(device).await.map_err(|e| with_device(e, device))?;
         }
     }
-    Ok(PreparedWatch { bits, words, bit_mode, word_mode })
+    Ok(PreparedWatch { bits, words, bit_reader, word_mode })
 }
 
 async fn choose_mode(
@@ -133,12 +209,18 @@ fn with_device(err: HostLinkError, device: &str) -> HostLinkError {
 async fn read_snapshot(client: &mut HostLinkClient, watch: &PreparedWatch) -> Result<DeviceSnapshot, HostLinkError> {
     let mut snapshot = DeviceSnapshot::default();
     if !watch.bits.is_empty() {
-        let values = match watch.bit_mode {
-            ReadMode::Monitor => client.read_bit_monitor(watch.bits.len()).await?,
-            ReadMode::Individual => {
-                let mut values = Vec::with_capacity(watch.bits.len());
-                for device in &watch.bits {
-                    values.push(client.read_bit(device).await?);
+        let values = match &watch.bit_reader {
+            BitReader::Monitor => client.read_bit_monitor(watch.bits.len()).await?,
+            BitReader::Plan(plan) => {
+                let mut values = vec![false; watch.bits.len()];
+                for group in &plan.groups {
+                    let words = client.read_relay_channels(&group.prefix, group.start, group.count).await?;
+                    for &(index, word, bit) in &group.members {
+                        values[index] = (words[word] >> bit) & 1 == 1;
+                    }
+                }
+                for &index in &plan.singles {
+                    values[index] = client.read_bit(&watch.bits[index]).await?;
                 }
                 values
             }
@@ -399,7 +481,7 @@ mod tests {
         let mut client = connect(plc.port).await;
         //重複と小文字は正規化される
         let prepared = prepare_watch(&mut client, watch(&["mr0", "Y0", "MR0"], &["DM0"])).await.unwrap();
-        assert_eq!(prepared.bit_mode, ReadMode::Monitor);
+        assert!(matches!(prepared.bit_reader, BitReader::Monitor));
         assert_eq!(prepared.word_mode, ReadMode::Monitor);
 
         let snapshot = read_snapshot(&mut client, &prepared).await.unwrap();
@@ -417,12 +499,63 @@ mod tests {
         .await;
         let mut client = connect(plc.port).await;
         let prepared = prepare_watch(&mut client, watch(&["MR0"], &["DM0"])).await.unwrap();
-        assert_eq!(prepared.bit_mode, ReadMode::Individual);
+        assert!(matches!(&prepared.bit_reader, BitReader::Plan(plan) if plan.groups.is_empty() && plan.singles == [0]));
         assert_eq!(prepared.word_mode, ReadMode::Individual);
 
         let snapshot = read_snapshot(&mut client, &prepared).await.unwrap();
         assert!(snapshot.bits["MR0"]);
         assert_eq!(snapshot.words["DM0"], 7);
+    }
+
+    #[test]
+    fn plans_channel_reads() {
+        let bits: Vec<String> = ["R58000", "R58015", "R58100", "R59003", "R70000", "MR0", "X0"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        let plan = plan_bit_reads(&bits);
+        let groups: Vec<_> = plan.groups.iter().map(|g| (g.prefix.as_str(), g.start, g.count)).collect();
+        //580~590chは間隔が小さいので1回にまとめ、700chは離れているので別に読む
+        assert_eq!(groups, vec![("MR", 0, 1), ("R", 580, 11), ("R", 700, 1)]);
+        assert_eq!(plan.groups[1].members, vec![(0, 0, 0), (1, 0, 15), (2, 1, 0), (3, 10, 3)]);
+        assert_eq!(plan.singles, vec![6]);
+    }
+
+    #[tokio::test]
+    async fn reads_relays_by_channel() {
+        let plc = mock::spawn(|cmd| match cmd {
+            "RDS R58000.H 2" => "8001 0000".into(),
+            "RDS MR000.H 1" => "0004".into(),
+            "RD X0" => "1".into(),
+            _ => "E1".into(),
+        })
+        .await;
+        let mut client = connect(plc.port).await;
+        let prepared = prepare_watch(&mut client, watch(&["R58000", "R58015", "R58100", "MR2", "X0"], &[])).await.unwrap();
+        let snapshot = read_snapshot(&mut client, &prepared).await.unwrap();
+        assert_eq!(
+            snapshot.bits,
+            BTreeMap::from([
+                ("R58000".into(), true),
+                ("R58015".into(), true),
+                ("R58100".into(), false),
+                ("MR2".into(), true),
+                ("X0".into(), true),
+            ])
+        );
+    }
+
+    #[tokio::test]
+    async fn falls_back_to_single_reads_when_channel_read_fails() {
+        let plc = mock::spawn(|cmd| match cmd {
+            "RD R58000" => "1".into(),
+            _ => "E1".into(),
+        })
+        .await;
+        let mut client = connect(plc.port).await;
+        let prepared = prepare_watch(&mut client, watch(&["R58000"], &[])).await.unwrap();
+        assert!(matches!(&prepared.bit_reader, BitReader::Plan(plan) if plan.groups.is_empty() && plan.singles == [0]));
+        assert!(read_snapshot(&mut client, &prepared).await.unwrap().bits["R58000"]);
     }
 
     #[tokio::test]

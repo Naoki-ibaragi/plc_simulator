@@ -4,6 +4,8 @@ import { Html, OrbitControls, useGLTF } from '@react-three/drei'
 import { Box3, Color, Quaternion, Vector3, type Group, type Mesh, type MeshStandardMaterial, type Object3D } from 'three'
 import { RuntimeContext, DeviceValueContext } from '../Runtime/RuntimeContext'
 import { FactoryEnvironment, FACTORY_HALF_SIZE } from './FactoryEnvironment'
+import { useIoSignals } from '../Runtime/useIoSignals'
+import { type IoSignal } from '../Runtime/ioMap'
 
 const MODEL_TARGET_SIZE = 6 //CADモデルの単位系(mm等)に関わらず、シーン内で見やすい最大辺長に正規化する
 const STROKE_SPEED = 0.02 //ボタンストロークの追従速度(m/s相当)
@@ -185,6 +187,44 @@ function getConfigsForModel(modelFolder: string): AssemblyConfig[] {
   return Object.entries(assemblyConfigModules)
     .filter(([path]) => path.startsWith(prefix))
     .map(([, config]) => config)
+}
+
+//I/O割付表に表示する部品種別の名前
+const ASSEMBLY_TYPE_LABEL: Record<string, string> = {
+  button: '押しボタン',
+  light: 'ランプ',
+  combair: 'コンベア',
+  aircylinder: 'エアシリンダ',
+  air_chuck: 'エアチャック',
+  proximity_sensor: '近接センサ',
+  light_gate: '光電センサ',
+}
+
+const SENSOR_LABEL: Record<string, string> = {
+  sensor_extended: '前進端',
+  sensor_retracted: '後退端',
+  sensor_open: '開端',
+  sensor_close: '閉端',
+}
+
+//動作定義から、部品が使う信号(デバイス)とその向きを集める。I/O割付表の行とKV連携時の読み書き対象になる
+//(ボタン/センサーはアプリ→PLCへの入力、ランプ/シリンダー等の駆動はPLC→アプリへの出力)
+function collectIoSignals(configs: AssemblyConfig[]): IoSignal[] {
+  const signals: IoSignal[] = []
+  for (const config of configs) {
+    if (config.type === 'gravity' || config.type === 'axis') continue
+    const typeLabel = ASSEMBLY_TYPE_LABEL[config.type] ?? config.type
+    const node = config.type === 'light_gate' ? config.receiver_node : config.node
+    const isInput = config.type === 'button' || config.type === 'proximity_sensor' || config.type === 'light_gate'
+    signals.push({ device: config.device, direction: isInput ? 'input' : 'output', label: `${typeLabel} ${node}`, source: 'equipment' })
+    if (config.type === 'aircylinder' || config.type === 'air_chuck') {
+      for (const key of ['sensor_extended', 'sensor_retracted', 'sensor_open', 'sensor_close'] as const) {
+        const sensor = (config as Partial<Record<typeof key, { device: string }>>)[key]
+        if (sensor) signals.push({ device: sensor.device, direction: 'input', label: `${typeLabel} ${node} ${SENSOR_LABEL[key]}`, source: 'equipment' })
+      }
+    }
+  }
+  return signals
 }
 
 function DeviceLabel({ label }: { label: string }) {
@@ -1222,6 +1262,8 @@ function AssemblyEquipment({ modelUrl, modelFolder, modelRotationDeg, cameraPosi
   //「リセット」ボタンはCanvas外のDOM要素なので、押してもOrbitControlsが保持しているカメラの位置・向きには影響しない。
   //resetTokenをインクリメントし、AssemblyModelScene側でその変化を検知してモデル内の各ノードを初期位置に戻す
   const [resetToken, setResetToken] = useState(0);
+  const ioSignals = useMemo(() => collectIoSignals(getConfigsForModel(modelFolder)), [modelFolder]);
+  useIoSignals('equipment', ioSignals);
 
   //RUNモードからEDITモードに戻った際、デバイス値(deviceValue)はRuntimeProvider側でリセットされるが、
   //モデル内の各ノードの位置(ワークの搬送位置・シリンダーのストローク位置等)はそれだけでは戻らないため、
